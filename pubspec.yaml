@@ -1,0 +1,67 @@
+name: gun_dart
+description: A Dart/Flutter port of Gun.js - a realtime, decentralized, offline-first, graph data synchronization engine.
+version: 0.0.1
+homepage: https://github.com/yourusername/gun_dart
+repository: https://github.com/yourusername/gun_dart
+issue_tracker: https://github.com/yourusername/gun_dart/issues
+documentation: https://github.com/yourusername/gun_dart#readme
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Core dependencies for Gun.js functionality
+  crypto: ^3.0.3              # For encryption and hashing
+  convert: ^3.1.1             # For data conversion (JSON, base64, etc.)
+  collection: ^1.17.2         # For advanced collection operations
+  uuid: ^4.1.0               # For generating unique identifiers
+  
+  # Network and storage
+  http: ^1.1.0               # HTTP client for network operations
+  path: ^1.8.3               # For file path operations
+  shared_preferences: ^2.2.2  # For local storage
+  sqflite: ^2.3.0            # SQLite for local database
+  
+  # Real-time capabilities
+  web_socket_channel: ^2.4.0  # WebSocket support for real-time sync
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  test: ^1.24.6
+  mockito: ^5.4.2
+  build_runner: ^2.4.7
+
+# Flutter configuration
+flutter:
+  # No assets or plugins initially
+
+# Additional package metadata
+topics:
+  - database
+  - realtime
+  - p2p
+  - decentralized
+  - offline-first
+  - graph
+  - sync
+  - flutter
+
+screenshots:
+  # Will add screenshots when we have a working demo
+
+funding:
+  # Add funding links if applicable
+
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  web:
+  windows:
