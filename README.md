@@ -162,9 +162,45 @@ void main() async {
 }
 ```
 
+## Gun.js Compatibility Status
+
+**Current Status**: gun_dart implements all core Gun.js concepts but needs protocol alignment for full ecosystem interoperability.
+
+### ✅ **What Works Today**
+- Complete Gun.js API surface (`.get()`, `.put()`, `.on()`, `.once()`)
+- Graph database with CRDT conflict resolution (HAM algorithm)
+- Real-time synchronization and offline-first capabilities
+- SEA-style authentication and encryption
+- Advanced CRDT data types and network transports
+- Production-ready for standalone Flutter/Dart applications
+
+### ⚠️ **Gun.js Ecosystem Integration**
+For direct interoperability with Gun.js applications, see our comprehensive roadmap:
+
+- **[Gun.js Compatibility Analysis](GUNJS_COMPATIBILITY.md)** - Current status and what needs work
+- **[Gun.js Compatibility TODO](GUNJS_COMPATIBILITY_TODO.md)** - Detailed implementation roadmap
+- **[Integration Guide](INTEGRATION_GUIDE.md)** - How to use gun_dart in your projects
+
+**Timeline**: Full Gun.js ecosystem compatibility achievable in **10-14 weeks** of focused development.
+
 ## Contributing
 
-This project is open for contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+This project welcomes contributions! Key areas:
+
+### **For Standalone Applications**
+- Feature enhancements and performance optimizations
+- Additional CRDT types and storage adapters
+- Flutter widget improvements and examples
+
+### **For Gun.js Compatibility**
+- Wire protocol implementation (highest priority)
+- HAM timestamp format standardization
+- SEA cryptography alignment with Gun.js
+- Comprehensive interoperability testing
+
+See our **[Gun.js Compatibility TODO](GUNJS_COMPATIBILITY_TODO.md)** for specific tasks and implementation details.
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
