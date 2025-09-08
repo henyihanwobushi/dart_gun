@@ -36,6 +36,8 @@ export 'src/network/transport.dart';
 export 'src/network/websocket_transport.dart';
 export 'src/network/http_transport.dart';
 export 'src/network/webrtc_transport.dart';
+export 'src/network/gun_wire_protocol.dart';
+export 'src/network/message_tracker.dart';
 
 // Auth exports
 export 'src/auth/user.dart';

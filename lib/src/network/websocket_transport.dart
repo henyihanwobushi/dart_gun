@@ -5,9 +5,9 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 import 'transport.dart';
 
-/// WebSocket transport implementation for Gun Dart
+/// WebSocket transport implementation for Gun Dart with Gun.js wire protocol support
 /// Provides real-time bidirectional communication over WebSocket
-class WebSocketTransport implements Transport {
+class WebSocketTransport extends BaseTransport {
   final String _url;
   WebSocketChannel? _channel;
   final StreamController<bool> _connectionStateController = StreamController.broadcast();
@@ -38,7 +38,8 @@ class WebSocketTransport implements Transport {
       : _reconnectDelay = reconnectDelay,
         _pingInterval = pingInterval,
         _autoReconnect = autoReconnect,
-        _maxReconnectAttempts = maxReconnectAttempts;
+        _maxReconnectAttempts = maxReconnectAttempts,
+        super();
   
   @override
   String get url => _url;
