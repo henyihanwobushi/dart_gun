@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'gun_chain.dart';
 import 'storage/storage_adapter.dart';
@@ -7,6 +6,7 @@ import 'storage/memory_storage.dart';
 import 'network/peer.dart';
 import 'types/types.dart';
 import 'types/events.dart';
+import 'data/graph.dart';
 
 /// Main Gun class - entry point for Gun Dart
 /// 
@@ -16,6 +16,7 @@ class Gun {
   final StorageAdapter _storage;
   final List<Peer> _peers = [];
   final StreamController<GunEvent> _eventController = StreamController.broadcast();
+  final Graph _graph = Graph();
   
   /// Creates a new Gun instance
   /// 
@@ -55,6 +56,7 @@ class Gun {
   Future<void> put(Map<String, dynamic> data, [Function? callback]) async {
     try {
       await _storage.put('', data);
+      _graph.putNode('', data);
       _eventController.add(GunEvent(
         type: GunEventType.put,
         key: '',
@@ -88,10 +90,17 @@ class Gun {
   /// Get the list of current peers
   List<Peer> get peers => List.unmodifiable(_peers);
   
+  /// Get the internal graph
+  Graph get graph => _graph;
+  
+  /// Get the event controller (for internal use by GunChain)
+  StreamController<GunEvent> get eventController => _eventController;
+  
   /// Close the Gun instance and clean up resources
   Future<void> close() async {
     await _eventController.close();
     await _storage.close();
+    _graph.dispose();
     
     for (final peer in _peers) {
       await peer.disconnect();

@@ -30,7 +30,7 @@ class GunEvent {
   /// Timestamp when the event occurred
   final DateTime timestamp;
   
-  const GunEvent({
+  GunEvent({
     required this.type,
     required this.key,
     this.data,

@@ -21,11 +21,26 @@ class GunChain {
   Future<GunChain> put(dynamic data, [Function? callback]) async {
     try {
       final fullKey = [..._path, _key].join('/');
+      Map<String, dynamic> dataMap;
+      
       if (data is Map<String, dynamic>) {
-        await _gun._storage.put(fullKey, data);
+        dataMap = data;
+        await _gun.storage.put(fullKey, dataMap);
       } else {
-        await _gun._storage.put(fullKey, {'_': data});
+        dataMap = {'_': data};
+        await _gun.storage.put(fullKey, dataMap);
       }
+      
+      // Update the graph
+      _gun.graph.putNode(fullKey, dataMap);
+      
+      // Emit event for subscribers
+      _gun.eventController.add(GunEvent(
+        type: GunEventType.put,
+        key: fullKey,
+        data: data,
+      ));
+      
       callback?.call(null);
       return this;
     } catch (error) {
@@ -36,15 +51,21 @@ class GunChain {
   
   /// Subscribe to changes on this node
   StreamSubscription on(GunListener listener) {
-    // TODO: Implement real-time subscription
-    return Stream.empty().listen((_) {});
+    final fullKey = [..._path, _key].join('/');
+    
+    // Listen to gun events and filter for our key
+    return _gun.eventController.stream
+        .where((event) => event.key == fullKey)
+        .listen((event) {
+      listener(event.data, event.key);
+    });
   }
   
   /// Get data once from this node
   Future<dynamic> once([Function? callback]) async {
     try {
       final fullKey = [..._path, _key].join('/');
-      final data = await _gun._storage.get(fullKey);
+      final data = await _gun.storage.get(fullKey);
       callback?.call(data, null);
       return data;
     } catch (error) {
