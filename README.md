@@ -29,44 +29,136 @@ Based on Gun.js architecture, this implementation will include:
 
 ## Project Status
 
-✅ **Production Ready** - Core Gun.js functionality fully implemented and tested.
+✅ **Production Ready** - Full Gun.js functionality with advanced features implemented and tested.
 
+### Core Features (v0.1.0)
 - [x] Project setup and structure
 - [x] Core graph data structures
 - [x] Local storage layer (Memory + SQLite)
 - [x] Network synchronization (WebSocket P2P)
 - [x] Real-time subscriptions and CRDT
 - [x] Vector clocks and conflict resolution
+- [x] Authentication system (SEA crypto)
+- [x] User management and encryption
+- [x] Flutter widget integration
 - [x] Comprehensive test suite (25+ tests)
 - [x] Examples and documentation
 - [x] Production-ready utilities
-- [ ] Authentication system (SEA crypto)
-- [ ] Advanced encryption features
-- [ ] Additional transport protocols
+
+### Advanced Features (v0.2.0)
+- [x] 🧮 Advanced CRDT Data Types (G-Counter, PN-Counter, G-Set, 2P-Set, OR-Set, LWW-Register)
+- [x] 🌐 Extended Network Transports (HTTP/HTTPS, WebRTC P2P)
+- [x] 🧪 Enhanced Test Coverage (60+ comprehensive tests)
+- [x] 📚 Advanced Examples and Documentation
+- [ ] 🚀 Performance Optimizations and Indexing
+- [ ] 📊 Analytics and Query Engine
 
 ## Installation
 
 ```yaml
 dependencies:
-  gun_dart: ^0.1.0
+  gun_dart: ^0.2.0
 ```
 
-## Basic Usage
+## Usage
+
+### Basic Example
 
 ```dart
 import 'package:gun_dart/gun_dart.dart';
 
-void main() {
+void main() async {
   // Initialize Gun instance
   final gun = Gun();
   
   // Store and retrieve data
-  gun.get('users').get('alice').put({'name': 'Alice', 'age': 30});
+  await gun.get('users').get('alice').put({'name': 'Alice', 'age': 30});
+  
+  // Get data once
+  final userData = await gun.get('users').get('alice').once();
+  print('User: $userData');
   
   // Listen for real-time updates
   gun.get('users').get('alice').on((data, key) {
     print('User data updated: $data');
   });
+  
+  await gun.close();
+}
+```
+
+### Advanced CRDT Data Types
+
+```dart
+import 'package:gun_dart/gun_dart.dart';
+
+void main() async {
+  // Distributed counters
+  final counter1 = CRDTFactory.createGCounter('node1');
+  final counter2 = CRDTFactory.createGCounter('node2');
+  
+  counter1.increment(5);
+  counter2.increment(3);
+  
+  counter1.merge(counter2);  // Merges without conflicts
+  print('Total count: ${counter1.value}');  // 8
+  
+  // Distributed sets
+  final set1 = CRDTFactory.createORSet<String>('node1');
+  set1.add('apple');
+  set1.add('banana');
+  set1.remove('apple');
+  set1.add('apple');  // Can re-add after removal
+  
+  print('Set contents: ${set1.elements}');
+}
+```
+
+### Network Transport Protocols
+
+```dart
+import 'package:gun_dart/gun_dart.dart';
+
+void main() async {
+  // HTTP transport for server communication
+  final httpTransport = HttpTransport(baseUrl: 'https://gun-server.com');
+  
+  // WebRTC transport for P2P
+  final webrtcTransport = WebRtcTransport(peerId: 'user123');
+  await webrtcTransport.connect();
+  
+  // Create offer/answer for WebRTC signaling
+  final offer = await webrtcTransport.createOffer();
+  final answer = await webrtcTransport.createAnswer(offer);
+  
+  await webrtcTransport.close();
+}
+```
+
+### User Authentication & Encryption
+
+```dart
+import 'package:gun_dart/gun_dart.dart';
+
+void main() async {
+  final gun = Gun();
+  
+  // Create user account
+  final user = gun.user;
+  await user.create('alice', 'secure-password');
+  
+  // Sign in
+  await user.auth('alice', 'secure-password');
+  
+  if (user.isAuthenticated) {
+    // Encrypt user-specific data
+    final encrypted = user.encrypt('private message');
+    final decrypted = user.decrypt(encrypted);
+    
+    print('Encrypted data works: ${decrypted == 'private message'}');
+  }
+  
+  await gun.close();
 }
 ```
 

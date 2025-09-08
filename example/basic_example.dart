@@ -1,8 +1,12 @@
 // This example avoids Flutter-specific dependencies to work with 'dart run'
 import 'package:gun_dart/src/gun.dart';
 import 'package:gun_dart/src/data/crdt.dart';
+import 'package:gun_dart/src/data/crdt_types.dart';
 import 'package:gun_dart/src/data/node.dart';
 import 'package:gun_dart/src/utils/utils.dart';
+import 'package:gun_dart/src/auth/sea.dart';
+import 'package:gun_dart/src/network/http_transport.dart';
+import 'package:gun_dart/src/network/webrtc_transport.dart';
 import 'dart:async';
 
 /// Basic example showing how to use Gun Dart
@@ -139,6 +143,118 @@ void main() async {
   print('   Wire format ready: ${wireFormat.containsKey('_')}');
   print('');
   
+  // 8. Security and Authentication (SEA)
+  print('🔒 8. Security and Authentication');
+  
+  // Generate cryptographic keys
+  final keyPair = await SEA.pair();
+  print('   Key pair generated: ${keyPair.pub.substring(0, 8)}...');
+  
+  // Encrypt sensitive data
+  final secretData = {'password': 'super-secret', 'token': 'abc123'};
+  final encrypted = await SEA.encrypt(secretData, 'my-password');
+  print('   Data encrypted successfully');
+  
+  // Decrypt the data
+  final decrypted = await SEA.decrypt(encrypted, 'my-password');
+  print('   Data decrypted: ${decrypted['password'] == 'super-secret'}');
+  
+  // Digital signatures
+  final signature = await SEA.sign('important message', keyPair);
+  final verified = await SEA.verify('important message', signature, keyPair.pub);
+  print('   Digital signature verified: $verified');
+  
+  // User authentication
+  print('\n👤 User Authentication:');
+  try {
+    final account = await gun.user.create('testuser', 'testpass123');
+    print('   User created: ${account.alias}');
+    print('   User authenticated: ${gun.user.isAuthenticated}');
+    
+    // User-specific encrypted storage
+    final userSecret = await gun.user.encrypt('user private data');
+    final userDecrypted = await gun.user.decrypt(userSecret);
+    print('   User data encryption works: ${userDecrypted == 'user private data'}');
+  } catch (e) {
+    print('   User demo: ${e.toString().substring(0, 50)}...');
+  }
+  print('');
+  
+  // 9. Advanced CRDT Data Types
+  print('🧮 9. Advanced CRDT Data Types');
+  
+  // G-Counter (grow-only counter)
+  print('   Testing G-Counter (distributed counter)...');
+  final counter1 = CRDTFactory.createGCounter('node1');
+  final counter2 = CRDTFactory.createGCounter('node2');
+  
+  counter1.increment(5);
+  counter2.increment(3);
+  print('     Counter 1 value: ${counter1.value}');
+  print('     Counter 2 value: ${counter2.value}');
+  
+  counter1.merge(counter2);
+  print('     Merged counter value: ${counter1.value}');
+  
+  // PN-Counter (increment/decrement counter)
+  print('   Testing PN-Counter (increment/decrement)...');
+  final pnCounter = CRDTFactory.createPNCounter('node1');
+  pnCounter.increment(10);
+  pnCounter.decrement(3);
+  print('     PN-Counter value: ${pnCounter.value}');
+  
+  // OR-Set (observed-remove set)
+  print('   Testing OR-Set (distributed set)...');
+  final orSet1 = CRDTFactory.createORSet<String>('node1');
+  final orSet2 = CRDTFactory.createORSet<String>('node2');
+  
+  orSet1.add('apple');
+  orSet1.add('banana');
+  orSet2.add('cherry');
+  orSet2.add('apple');
+  orSet2.remove('apple');
+  
+  orSet1.merge(orSet2);
+  print('     OR-Set elements: ${orSet1.elements}');
+  
+  // LWW-Register (last-write-wins register)
+  print('   Testing LWW-Register (last-write-wins)...');
+  final lwwReg = CRDTFactory.createLWWRegister<String>('node1');
+  lwwReg.set('first value');
+  await Future.delayed(const Duration(milliseconds: 1));
+  lwwReg.set('second value');
+  print('     LWW-Register value: "${lwwReg.value}"');
+  print('');
+
+  // 10. Network Transport Protocols
+  print('🌐 10. Network Transport Protocols');
+  
+  // HTTP Transport
+  print('   Testing HTTP/HTTPS transport...');
+  final httpTransport = HttpTransport(baseUrl: 'https://gun-server.example.com');
+  print('     HTTP transport URL: ${httpTransport.url}');
+  print('     Initial connection state: ${httpTransport.isConnected ? '✅' : '❌'}');
+  
+  // WebRTC Transport
+  print('   Testing WebRTC P2P transport...');
+  final webrtcTransport = WebRtcTransport(peerId: 'demo-peer');
+  await webrtcTransport.connect();
+  print('     WebRTC transport URL: ${webrtcTransport.url}');
+  print('     WebRTC connected: ${webrtcTransport.isConnected ? '✅' : '❌'}');
+  print('     WebRTC state: ${webrtcTransport.webRtcConnectionState}');
+  
+  // Disconnect and test offer/answer flow
+  await webrtcTransport.disconnect();
+  
+  // Test WebRTC offer/answer
+  final offer = await webrtcTransport.createOffer();
+  final answer = await webrtcTransport.createAnswer(offer);
+  print('     WebRTC offer created: ${offer['type']}');
+  print('     WebRTC answer created: ${answer['type']}');
+  
+  await webrtcTransport.close();
+  print('');
+  
   // Clean up
   print('🧹 Cleaning up...');
   await gun.close();
@@ -151,5 +267,10 @@ void main() async {
   print('  • ✅ CRDT conflict resolution');
   print('  • ✅ Persistent storage');
   print('  • ✅ Network-ready protocols');
+  print('  • ✅ Security & encryption (SEA)');
+  print('  • ✅ User authentication');
+  print('  • ✅ Flutter widget integration');
+  print('  • ✅ Advanced CRDT data types');
+  print('  • ✅ Multiple transport protocols');
   print('  • ✅ Comprehensive utilities');
 }

@@ -21,6 +21,7 @@ export 'src/gun_chain.dart';
 export 'src/data/graph.dart';
 export 'src/data/node.dart';
 export 'src/data/crdt.dart';
+export 'src/data/crdt_types.dart';
 
 // Storage exports
 export 'src/storage/storage_adapter.dart';
@@ -28,10 +29,12 @@ export 'src/storage/memory_storage.dart';
 // Note: SQLite storage is available but requires Flutter environment
 // export 'src/storage/sqlite_storage.dart';
 
-// Network exports
+// Network layer
 export 'src/network/peer.dart';
 export 'src/network/transport.dart';
 export 'src/network/websocket_transport.dart';
+export 'src/network/http_transport.dart';
+export 'src/network/webrtc_transport.dart';
 
 // Auth exports
 export 'src/auth/user.dart';
@@ -45,3 +48,7 @@ export 'src/utils/validator.dart';
 // Types and interfaces
 export 'src/types/types.dart';
 export 'src/types/events.dart';
+
+// Flutter widgets (only available when using Flutter)
+export 'src/flutter/gun_builder.dart';
+export 'src/flutter/gun_provider.dart';

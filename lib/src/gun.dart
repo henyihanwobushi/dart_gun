@@ -7,6 +7,7 @@ import 'network/peer.dart';
 import 'types/types.dart';
 import 'types/events.dart';
 import 'data/graph.dart';
+import 'auth/user.dart';
 
 /// Main Gun class - entry point for Gun Dart
 /// 
@@ -17,6 +18,7 @@ class Gun {
   final List<Peer> _peers = [];
   final StreamController<GunEvent> _eventController = StreamController.broadcast();
   final Graph _graph = Graph();
+  late final User _user;
   
   /// Creates a new Gun instance
   /// 
@@ -27,6 +29,7 @@ class Gun {
       _peers.addAll(opts!.peers!);
     }
     
+    _user = User(this);
     _initializeGun();
   }
   
@@ -93,6 +96,9 @@ class Gun {
   /// Get the internal graph
   Graph get graph => _graph;
   
+  /// Get the user authentication system
+  User get user => _user;
+  
   /// Get the event controller (for internal use by GunChain)
   StreamController<GunEvent> get eventController => _eventController;
   
@@ -101,6 +107,7 @@ class Gun {
     await _eventController.close();
     await _storage.close();
     _graph.dispose();
+    _user.dispose();
     
     for (final peer in _peers) {
       await peer.disconnect();

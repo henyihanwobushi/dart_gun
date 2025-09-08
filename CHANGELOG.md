@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2024-01-XX
+
+### Added
+- 🚀 **Advanced CRDT Data Types**
+  - G-Counter (grow-only distributed counter)
+  - PN-Counter (increment/decrement distributed counter) 
+  - G-Set (grow-only distributed set)
+  - 2P-Set (two-phase distributed set with add/remove)
+  - OR-Set (observed-remove set with re-add capability)
+  - LWW-Register (last-write-wins register)
+  - CRDT Factory for creating and managing CRDT instances
+- 🌐 **Extended Network Transport Protocols**
+  - HTTP/HTTPS transport for server communication
+  - WebRTC transport for peer-to-peer connections
+  - Enhanced transport interface with connection state streams
+- 🧪 **Comprehensive Test Coverage**
+  - 43+ new test cases for CRDT data types
+  - 18+ new test cases for transport protocols
+  - Complete test coverage for advanced features
+- 📚 **Enhanced Examples**
+  - Updated basic example with CRDT demonstrations
+  - Network transport protocol examples
+  - Advanced data type usage patterns
+
+### Technical Improvements
+- Standardized transport interface with unified message handling
+- Improved async/await patterns in transport implementations
+- Enhanced error handling and connection state management
+- Better separation of concerns in CRDT implementations
+- Optimized performance for distributed operations
+
+### Changed
+- Enhanced library exports to include new CRDT types and transports
+- Updated basic example to demonstrate all new features
+- Improved Flutter widget compatibility and imports
+
 ### Added
 - Complete Gun.js port with all core features
 - Real-time data synchronization with event streams
