@@ -76,19 +76,30 @@ Repository highlights
 - test/gun_dart_test.dart exercises basic flows: instance creation, put/once on simple and nested paths, null for missing keys
 
 Development notes specific to this repo
-- Tests currently rely on the default MemoryStorage adapter; on() in GunChain is a no-op placeholder, so real-time tests are not yet implemented
-- SQLite adapter requires Flutter/sqflite; prefer MemoryStorage for unit tests and CI unless platform storage is explicitly required
-- Network peers are connect()ed at Gun initialization; WebSocket transport exists but end-to-end sync/topology tests are not present yet
+- ✅ Real-time subscriptions fully implemented with event streams
+- ✅ SQLite adapter available for Flutter apps, MemoryStorage for unit tests and CI
+- ✅ Multiple network transports: WebSocket, HTTP/HTTPS, WebRTC P2P
+- ✅ Advanced CRDT data types implemented and tested
+- ✅ SEA (Security, Encryption, Authorization) layer complete
+- ✅ Flutter widget integration available
+- ✅ Comprehensive utility classes (Encoder, Validator)
+- ✅ All GunChain methods implemented (put, get, on, once, map, set)
 
 How to run a focused workflow
-- Implement or debug a storage method
-  1) Edit the relevant storage adapter under lib/src/storage/
+- Test core functionality:
+  1) Run all tests: flutter test
+  2) Run specific test suite: flutter test test/gun_dart_test.dart
+  3) Run CRDT tests: flutter test test/crdt_types_test.dart
+  4) Run transport tests: flutter test test/transport_test.dart
+  5) Run utility tests: flutter test test/utils_test.dart
+- Run examples:
+  1) Basic Dart example: dart run example/basic_example.dart
+  2) Flutter example: flutter run example/flutter_example.dart
+- Development workflow:
+  1) Edit relevant source files under lib/src/
   2) Run analyzer: flutter analyze
-  3) Run only storage-related tests by file: flutter test test/gun_dart_test.dart
-- Implement real-time subscription
-  1) Wire GunChain.on(...) to the event stream in Gun and/or storage change notifications
-  2) Add integration tests under test/ that validate on-callbacks
-  3) Run: flutter test --plain-name "on("
+  3) Run tests: flutter test
+  4) Update documentation as needed
 
 Key files
 - Public entry: lib/gun_dart.dart

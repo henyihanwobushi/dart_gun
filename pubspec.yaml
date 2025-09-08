@@ -1,6 +1,6 @@
 name: gun_dart
 description: A Dart/Flutter port of Gun.js - a realtime, decentralized, offline-first, graph data synchronization engine.
-version: 0.2.0
+version: 0.2.1
 homepage: https://github.com/yourusername/gun_dart
 repository: https://github.com/yourusername/gun_dart
 issue_tracker: https://github.com/yourusername/gun_dart/issues

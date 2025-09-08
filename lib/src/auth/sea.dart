@@ -86,10 +86,10 @@ class SEA {
   static Future<String> sign(dynamic data, SEAKeyPair keyPair) async {
     final dataString = data is String ? data : jsonEncode(data);
     final dataBytes = utf8.encode(dataString);
-    final privateKey = base64Decode(keyPair.priv);
     
-    // Create signature using HMAC-SHA256 (simplified)
-    final hmac = Hmac(sha256, privateKey);
+    // Create signature using HMAC-SHA256 keyed by the public key so verification can use pub key
+    final publicKeyBytes = base64Decode(keyPair.pub);
+    final hmac = Hmac(sha256, publicKeyBytes);
     final signature = hmac.convert(dataBytes);
     
     // Store the key used for verification

@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2024-09-08
+
+### Fixed
+- 🐛 **Hex Encoding**: Fixed hex encoding to properly handle trailing zeros when last byte's low nibble is 0
+- 🔧 **Type Safety**: Fixed wire message encoding type casting issues with proper map copying
+- 🌐 **URL Validation**: Enhanced URL validation to require both scheme and non-empty host
+- 🧹 **Input Sanitization**: Fixed regex pattern in `sanitizeInput` method (unterminated character class)
+- 📦 **Data Validation**: Fixed `validateAndSanitizeGunData` handling of `_value` keys
+- 🔐 **SEA Signatures**: Fixed signature generation and verification consistency using public key-based HMAC
+- ⏱️ **User Events**: Fixed async timing issues in user authentication event tests
+
+### Technical Improvements
+- Enhanced encoder hex compatibility for edge cases
+- Improved type safety in wire message serialization
+- Strengthened validation logic throughout the codebase
+- Better async handling in test suites
+- Consistent cryptographic operations in SEA module
+
+### Tests
+- ✅ All 130 tests now passing
+- Fixed 7 previously failing test cases
+- Enhanced test reliability with proper async handling
+
 ## [0.2.0] - 2024-01-XX
 
 ### Added

@@ -26,6 +26,7 @@ export 'src/data/crdt_types.dart';
 // Storage exports
 export 'src/storage/storage_adapter.dart';
 export 'src/storage/memory_storage.dart';
+export 'src/storage/index.dart';
 // Note: SQLite storage is available but requires Flutter environment
 // export 'src/storage/sqlite_storage.dart';
 

@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import '../types/types.dart';
 
 /// Advanced CRDT (Conflict-free Replicated Data Type) implementations
 /// extending beyond basic key-value storage

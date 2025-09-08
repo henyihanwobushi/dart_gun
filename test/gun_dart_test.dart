@@ -524,15 +524,21 @@ void main() {
       const password = 'eventpass';
       
       final events = <UserEvent>[];
-      gun.user.events.listen((event) => events.add(event));
+      final subscription = gun.user.events.listen((event) => events.add(event));
       
       await gun.user.create(alias, password);
+      // Give the stream time to process the event
+      await Future.delayed(Duration(milliseconds: 10));
       expect(events.length, equals(1));
       expect(events[0].type, equals(UserEventType.created));
       
       await gun.user.leave();
+      // Give the stream time to process the event
+      await Future.delayed(Duration(milliseconds: 10));
       expect(events.length, equals(2));
       expect(events[1].type, equals(UserEventType.signedOut));
+      
+      subscription.cancel();
     });
   });
 }
