@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import '../lib/gun_dart.dart';
 import '../lib/src/utils/gunjs_migration.dart';
 
@@ -166,7 +167,7 @@ Future<void> demonstrateImport(Gun gun) async {
     // Write mock data to file
     final mockFile = File('/tmp/mock_gunjs_export.json');
     await mockFile.writeAsString(
-      const JsonEncoder.withIndent('  ').convert(mockGunJSData)
+const JsonEncoder.withIndent('  ').convert(mockGunJSData)
     );
     
     // Import the mock Gun.js data

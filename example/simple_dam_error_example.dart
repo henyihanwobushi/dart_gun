@@ -1,6 +1,4 @@
-import 'dart:io';
 import '../lib/src/network/gun_error_handler.dart';
-import '../lib/src/utils/utils.dart';
 
 Future<void> main() async {
   print('=== Gun Dart DAM Error Handling Example ===');
