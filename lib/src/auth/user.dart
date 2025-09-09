@@ -251,8 +251,8 @@ class User {
   }
 
   /// Dispose user resources
-  void dispose() {
-    _eventController.close();
+  Future<void> dispose() async {
+    await _eventController.close();
   }
 }
 

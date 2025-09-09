@@ -8,6 +8,7 @@ import 'package:gun_dart/src/auth/sea.dart';
 import 'package:gun_dart/src/network/http_transport.dart';
 import 'package:gun_dart/src/network/webrtc_transport.dart';
 import 'dart:async';
+import 'dart:io';
 
 /// Basic example showing how to use Gun Dart
 void main() async {
@@ -256,7 +257,13 @@ void main() async {
   
   // Clean up
   print('🧹 Cleaning up...');
-  await gun.close();
+  try {
+    await gun.close();
+    print('   Gun instance closed successfully');
+  } catch (e) {
+    print('   Warning: Error during cleanup: $e');
+  }
+  
   print('');
   print('✅ Gun Dart example completed successfully!');
   print('');
@@ -272,4 +279,9 @@ void main() async {
   print('  • ✅ Advanced CRDT data types');
   print('  • ✅ Multiple transport protocols');
   print('  • ✅ Comprehensive utilities');
+  
+  // Ensure the process exits cleanly
+  print('');
+  print('🚪 Exiting...');
+  exit(0);
 }

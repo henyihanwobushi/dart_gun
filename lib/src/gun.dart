@@ -213,14 +213,20 @@ class Gun {
   
   /// Close the Gun instance and clean up resources
   Future<void> close() async {
-    await _eventController.close();
-    await _storage.close();
-    _graph.dispose();
-    _user.dispose();
-    _queryManager.clear();
-    
+    // Close all peers first
     for (final peer in _peers) {
       await peer.disconnect();
+      await peer.close();
     }
+    _peers.clear();
+    
+    // Close storage and other components
+    await _storage.close();
+    _graph.dispose();
+    await _user.dispose();
+    _queryManager.clear();
+    
+    // Close event controller last
+    await _eventController.close();
   }
 }
