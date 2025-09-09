@@ -42,6 +42,8 @@ export 'src/network/message_tracker.dart';
 export 'src/network/gun_query.dart';
 export 'src/network/peer_handshake.dart';
 export 'src/network/mesh_discovery.dart';
+export 'src/network/gun_relay_client.dart';
+export 'src/network/relay_pool_manager.dart';
 
 // Auth
 export 'src/auth/user.dart';

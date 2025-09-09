@@ -1,6 +1,7 @@
 import '../storage/storage_adapter.dart';
 import '../network/peer.dart';
 import '../network/gun_wire_protocol.dart';
+import '../network/relay_pool_manager.dart';
 
 /// Configuration options for Gun instance
 class GunOptions {
@@ -9,6 +10,21 @@ class GunOptions {
   
   /// List of peers to connect to
   final List<Peer>? peers;
+  
+  /// List of Gun.js relay servers to connect to
+  final List<String>? relayServers;
+  
+  /// Maximum number of relay connections
+  final int? maxRelayConnections;
+  
+  /// Minimum number of relay connections
+  final int? minRelayConnections;
+  
+  /// Load balancing strategy for relay servers
+  final LoadBalancingStrategy? relayLoadBalancing;
+  
+  /// Enable automatic discovery of relay servers
+  final bool? enableRelayDiscovery;
   
   /// Enable local storage
   final bool localStorage;
@@ -25,11 +41,35 @@ class GunOptions {
   const GunOptions({
     this.storage,
     this.peers,
+    this.relayServers,
+    this.maxRelayConnections,
+    this.minRelayConnections,
+    this.relayLoadBalancing,
+    this.enableRelayDiscovery,
     this.localStorage = true,
     this.realtime = true,
     this.maxPeers = 10,
     this.timeout = 5000,
   });
+  
+  /// Create GunOptions with relay servers
+  factory GunOptions.withRelays({
+    List<String>? relayServers,
+    StorageAdapter? storage,
+    int? maxRelayConnections,
+    int? minRelayConnections,
+    LoadBalancingStrategy? loadBalancing,
+    bool? enableDiscovery,
+  }) {
+    return GunOptions(
+      storage: storage,
+      relayServers: relayServers,
+      maxRelayConnections: maxRelayConnections ?? 5,
+      minRelayConnections: minRelayConnections ?? 1,
+      relayLoadBalancing: loadBalancing ?? LoadBalancingStrategy.healthBased,
+      enableRelayDiscovery: enableDiscovery ?? true,
+    );
+  }
 }
 
 /// Represents a node in the Gun graph

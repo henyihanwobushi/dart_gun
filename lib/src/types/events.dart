@@ -11,6 +11,8 @@ enum GunEventType {
   auth,
   create,
   leave,
+  network,
+  error,
 }
 
 /// Represents an event in Gun Dart

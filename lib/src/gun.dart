@@ -5,6 +5,7 @@ import 'storage/storage_adapter.dart';
 import 'storage/memory_storage.dart';
 import 'network/peer.dart';
 import 'network/gun_query.dart';
+import 'network/relay_pool_manager.dart';
 import 'types/types.dart';
 import 'types/events.dart';
 import 'data/graph.dart';
@@ -22,15 +23,27 @@ class Gun {
   final StreamController<GunEvent> _eventController = StreamController.broadcast();
   final Graph _graph = Graph();
   final GunQueryManager _queryManager = GunQueryManager();
+  RelayPoolManager? _relayPool;
   late final User _user;
   
   /// Creates a new Gun instance
   /// 
-  /// [opts] - Configuration options including storage and peers
+  /// [opts] - Configuration options including storage, peers, and relays
   Gun([GunOptions? opts]) 
       : _storage = opts?.storage ?? MemoryStorage() {
     if (opts?.peers != null) {
       _peers.addAll(opts!.peers!);
+    }
+    
+    // Initialize relay pool if relay servers are provided
+    if (opts?.relayServers != null && opts!.relayServers!.isNotEmpty) {
+      _relayPool = RelayPoolManager(RelayPoolConfig(
+        seedRelays: opts.relayServers!,
+        maxConnections: opts.maxRelayConnections ?? 5,
+        minConnections: opts.minRelayConnections ?? 1,
+        loadBalancing: opts.relayLoadBalancing ?? LoadBalancingStrategy.healthBased,
+        autoDiscovery: opts.enableRelayDiscovery ?? true,
+      ));
     }
     
     _user = User(this);
@@ -38,13 +51,28 @@ class Gun {
   }
   
   /// Initialize the Gun instance
-  void _initializeGun() {
+  void _initializeGun() async {
     // Initialize storage
-    _storage.initialize();
+    await _storage.initialize();
     
     // Connect to peers if any
     for (final peer in _peers) {
       peer.connect();
+    }
+    
+    // Start relay pool if configured
+    if (_relayPool != null) {
+      await _relayPool!.start();
+      
+      // Set up relay message handling
+      _relayPool!.messages.listen((message) {
+        _handleRelayMessage(message);
+      });
+      
+      // Set up relay event handling
+      _relayPool!.events.listen((event) {
+        _handleRelayEvent(event);
+      });
     }
   }
   
@@ -128,9 +156,8 @@ class Gun {
       // First, try local storage
       final localData = await _tryLocalQuery(query);
       
-      // Always return result with local data (even if null)
-      // In Gun.js, null/undefined is a valid response meaning "no data"
-      if (!useNetwork || _peers.isEmpty) {
+      // If we have local data or network is disabled, return immediately
+      if (localData != null || !useNetwork) {
         final result = GunQueryResult(
           query: query,
           data: localData,
@@ -138,6 +165,15 @@ class Gun {
         
         _queryManager.handleResult(query.queryId, result);
         return result;
+      }
+      
+      // Send query to relay servers first (if available)
+      if (_relayPool != null) {
+        try {
+          await _relayPool!.sendGetQuery(query.nodeId, path: query.path);
+        } catch (e) {
+          // Relay query failed, continue with peers
+        }
       }
       
       // Send query to peers if no local data and network is enabled
@@ -149,7 +185,7 @@ class Gun {
         }
       }
       
-      // For now, return local result (peer responses will be handled via message system)
+      // Return result with local data (null is valid in Gun.js)
       final result = GunQueryResult(
         query: query,
         data: localData,
@@ -222,9 +258,116 @@ class Gun {
     }
   }
   
+  /// Get relay pool manager (if configured)
+  RelayPoolManager? get relayPool => _relayPool;
+  
+  /// Get relay statistics
+  Map<String, dynamic>? get relayStats => _relayPool?.stats;
+  
+  /// Add a relay server to the pool
+  Future<bool> addRelay(String url) async {
+    if (_relayPool == null) {
+      // Initialize relay pool if not already done
+      _relayPool = RelayPoolManager(RelayPoolConfig(
+        seedRelays: [],
+        maxConnections: 5,
+        minConnections: 1,
+      ));
+      await _relayPool!.start();
+      
+      // Set up message and event handling
+      _relayPool!.messages.listen(_handleRelayMessage);
+      _relayPool!.events.listen(_handleRelayEvent);
+    }
+    
+    return await _relayPool!.addRelay(url);
+  }
+  
+  /// Remove a relay server from the pool
+  Future<void> removeRelay(String url) async {
+    if (_relayPool != null) {
+      await _relayPool!.removeRelay(url);
+    }
+  }
+  
+  /// Handle incoming messages from relay servers
+  void _handleRelayMessage(Map<String, dynamic> message) {
+    try {
+      // Handle different message types
+      if (message.containsKey('put')) {
+        _handleRelayPutMessage(message);
+      } else if (message.containsKey('get')) {
+        _handleRelayGetMessage(message);
+      } else if (message.containsKey('dam')) {
+        _handleRelayErrorMessage(message);
+      }
+    } catch (e) {
+      // Ignore malformed messages
+    }
+  }
+  
+  /// Handle put messages from relay servers
+  void _handleRelayPutMessage(Map<String, dynamic> message) async {
+    final putData = message['put'] as Map<String, dynamic>?;
+    if (putData == null) return;
+    
+    for (final entry in putData.entries) {
+      final nodeId = entry.key;
+      final nodeData = entry.value as Map<String, dynamic>;
+      
+      // Store the data locally
+      await _storage.put(nodeId, nodeData);
+      
+      // Update the graph
+      _graph.putNode(nodeId, nodeData);
+      
+      // Emit event
+      _eventController.add(GunEvent(
+        type: GunEventType.put,
+        key: nodeId,
+        data: nodeData,
+      ));
+    }
+  }
+  
+  /// Handle get messages from relay servers
+  void _handleRelayGetMessage(Map<String, dynamic> message) async {
+    // Relay servers typically don't send get messages to clients
+    // This would be used if we were acting as a relay server ourselves
+  }
+  
+  /// Handle error messages from relay servers
+  void _handleRelayErrorMessage(Map<String, dynamic> message) {
+    final error = message['dam'] as String?;
+    if (error != null) {
+      // Emit error event
+      _eventController.add(GunEvent(
+        type: GunEventType.error,
+        key: '',
+        data: {'error': error},
+      ));
+    }
+  }
+  
+  /// Handle relay server events
+  void _handleRelayEvent(RelayPoolEvent event) {
+    // Forward relay events as Gun events
+    _eventController.add(GunEvent(
+      type: GunEventType.network,
+      key: event.relayUrl ?? '',
+      data: event.toMap(),
+    ));
+  }
+  
   /// Close the Gun instance and clean up resources
   Future<void> close() async {
-    // Close all peers first
+    // Close relay pool first
+    if (_relayPool != null) {
+      await _relayPool!.close();
+      _relayPool = null;
+    }
+    
+    // Close all peers
     for (final peer in _peers) {
       await peer.disconnect();
       await peer.close();
