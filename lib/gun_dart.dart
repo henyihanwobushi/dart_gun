@@ -30,7 +30,7 @@ export 'src/storage/index.dart';
 // Note: SQLite storage is available but requires Flutter environment
 // export 'src/storage/sqlite_storage.dart';
 
-// Network layer
+// Network
 export 'src/network/peer.dart';
 export 'src/network/transport.dart';
 export 'src/network/websocket_transport.dart';
@@ -38,8 +38,9 @@ export 'src/network/http_transport.dart';
 export 'src/network/webrtc_transport.dart';
 export 'src/network/gun_wire_protocol.dart';
 export 'src/network/message_tracker.dart';
+export 'src/network/gun_query.dart';
 
-// Auth exports
+// Auth
 export 'src/auth/user.dart';
 export 'src/auth/sea.dart';
 

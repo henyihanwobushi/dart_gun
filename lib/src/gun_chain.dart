@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'gun.dart';
+import 'network/gun_query.dart';
 import 'types/types.dart';
 import 'types/events.dart';
 
@@ -14,7 +15,9 @@ class GunChain {
   
   /// Get a child node by key
   GunChain get(String key) {
-    return GunChain(_gun, key, [..._path, _key]);
+    // Build the new path by adding the current key to the existing path
+    final currentPath = _path.isEmpty ? <String>[] : <String>[..._path, _key];
+    return GunChain(_gun, key, currentPath);
   }
   
   /// Put data at this node
@@ -64,10 +67,34 @@ class GunChain {
   /// Get data once from this node
   Future<dynamic> once([Function? callback]) async {
     try {
-      final fullKey = [..._path, _key].join('/');
-      final data = await _gun.storage.get(fullKey);
-      callback?.call(data, null);
-      return data;
+      // Create a Gun.js compatible query
+      final rootNode = _path.isNotEmpty ? _path.first : _key;
+      final queryPath = _path.length > 1 
+          ? [..._path.skip(1), _key]
+          : _path.isEmpty 
+              ? <String>[]
+              : [_key];
+      
+      final query = GunQuery(
+        nodeId: rootNode,
+        path: queryPath,
+        callback: callback,
+      );
+      
+      // Execute the query through Gun instance
+      final result = await _gun.executeQuery(query);
+      
+      if (result.isSuccess) {
+        return result.data;
+      } else if (result.data == null && result.error == null) {
+        // No data found - this is normal Gun.js behavior
+        callback?.call(null, null);
+        return null;
+      } else {
+        final error = result.error ?? 'Query failed';
+        callback?.call(null, error);
+        throw Exception(error);
+      }
     } catch (error) {
       callback?.call(null, error.toString());
       rethrow;

@@ -350,6 +350,12 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "pointycastle",
+      "rootUri": "file:///Users/work/.pub-cache/hosted/pub.flutter-io.cn/pointycastle-3.9.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
+    },
+    {
       "name": "pool",
       "rootUri": "file:///Users/work/.pub-cache/hosted/pub.flutter-io.cn/pool-1.5.1",
       "packageUri": "lib/",

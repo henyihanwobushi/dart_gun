@@ -4,10 +4,12 @@ import 'gun_chain.dart';
 import 'storage/storage_adapter.dart';
 import 'storage/memory_storage.dart';
 import 'network/peer.dart';
+import 'network/gun_query.dart';
 import 'types/types.dart';
 import 'types/events.dart';
 import 'data/graph.dart';
 import 'auth/user.dart';
+import 'utils/utils.dart';
 
 /// Main Gun class - entry point for Gun Dart
 /// 
@@ -18,6 +20,7 @@ class Gun {
   final List<Peer> _peers = [];
   final StreamController<GunEvent> _eventController = StreamController.broadcast();
   final Graph _graph = Graph();
+  final GunQueryManager _queryManager = GunQueryManager();
   late final User _user;
   
   /// Creates a new Gun instance
@@ -102,12 +105,119 @@ class Gun {
   /// Get the event controller (for internal use by GunChain)
   StreamController<GunEvent> get eventController => _eventController;
   
+  /// Get the query manager (for internal use by GunChain)
+  GunQueryManager get queryManager => _queryManager;
+  
+  /// Execute a graph query
+  Future<GunQueryResult> executeQuery(GunQuery query, {bool useNetwork = true}) async {
+    try {
+      // Track the query
+      _queryManager.trackQuery(query);
+      
+      // First, try local storage
+      final localData = await _tryLocalQuery(query);
+      
+      // Always return result with local data (even if null)
+      // In Gun.js, null/undefined is a valid response meaning "no data"
+      if (!useNetwork || _peers.isEmpty) {
+        final result = GunQueryResult(
+          query: query,
+          data: localData,
+        );
+        
+        _queryManager.handleResult(query.queryId, result);
+        return result;
+      }
+      
+      // Send query to peers if no local data and network is enabled
+      final wireMessage = query.toWireFormat();
+      
+      for (final peer in _peers) {
+        if (peer.isConnected) {
+          await peer.send(wireMessage);
+        }
+      }
+      
+      // For now, return local result (peer responses will be handled via message system)
+      final result = GunQueryResult(
+        query: query,
+        data: localData,
+      );
+      
+      _queryManager.handleResult(query.queryId, result);
+      return result;
+      
+    } catch (error) {
+      final result = GunQueryResult(
+        query: query,
+        error: error.toString(),
+      );
+      
+      _queryManager.handleResult(query.queryId, result);
+      return result;
+    }
+  }
+  
+  /// Try to resolve query from local storage
+  Future<Map<String, dynamic>?> _tryLocalQuery(GunQuery query) async {
+    try {
+      final targetKey = query.fullPath.join('/');
+      return await _storage.get(targetKey);
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  /// Handle incoming query from peer
+  Future<void> handleIncomingQuery(GunQuery query, String peerId) async {
+    try {
+      // Try to resolve the query locally
+      final data = await _tryLocalQuery(query);
+      
+      if (data != null) {
+        // Send response back to the peer
+        final response = {
+          'put': {query.targetNodeId: data},
+          '#': query.queryId, // Acknowledge the query
+          '@': Utils.randomString(8),
+        };
+        
+        // Find the peer and send response
+        final peer = _peers.firstWhere(
+          (p) => p.url.contains(peerId),
+          orElse: () => _peers.isNotEmpty ? _peers.first : throw StateError('No peers available'),
+        );
+        
+        if (peer.isConnected) {
+          await peer.send(response);
+        }
+      }
+    } catch (e) {
+      // Could not resolve query - send DAM (error) message
+      final errorResponse = {
+        'dam': 'Could not resolve query: ${e.toString()}',
+        '#': query.queryId,
+        '@': Utils.randomString(8),
+      };
+      
+      try {
+        final peer = _peers.first;
+        if (peer.isConnected) {
+          await peer.send(errorResponse);
+        }
+      } catch (_) {
+        // Ignore peer sending errors
+      }
+    }
+  }
+  
   /// Close the Gun instance and clean up resources
   Future<void> close() async {
     await _eventController.close();
     await _storage.close();
     _graph.dispose();
     _user.dispose();
+    _queryManager.clear();
     
     for (final peer in _peers) {
       await peer.disconnect();

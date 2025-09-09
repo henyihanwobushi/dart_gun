@@ -19,6 +19,7 @@ dependencies:
   convert: ^3.1.1             # For data conversion (JSON, base64, etc.)
   collection: ^1.17.2         # For advanced collection operations
   uuid: ^4.1.0               # For generating unique identifiers
+  pointycastle: ^3.7.3        # For secp256k1 ECDSA (Gun.js SEA compatibility)
   
   # Network and storage
   http: ^1.1.0               # HTTP client for network operations

@@ -13,6 +13,7 @@
         "flutter",
         "http",
         "path",
+        "pointycastle",
         "shared_preferences",
         "sqflite",
         "uuid",
@@ -180,6 +181,15 @@
         "http_parser",
         "meta",
         "web"
+      ]
+    },
+    {
+      "name": "pointycastle",
+      "version": "3.9.1",
+      "dependencies": [
+        "collection",
+        "convert",
+        "js"
       ]
     },
     {
