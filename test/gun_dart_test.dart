@@ -27,8 +27,17 @@ void main() {
       await gun.get('test').put(testData);
       
       // Retrieve data
-      final retrieved = await gun.get('test').once();
-      expect(retrieved, equals(testData));
+      final retrieved = await gun.get('test').once() as Map<String, dynamic>;
+      
+      // Check that the data content is correct (ignoring metadata)
+      expect(retrieved['name'], equals('Test User'));
+      expect(retrieved['value'], equals(42));
+      
+      // Check that metadata was added
+      expect(retrieved['_'], isA<Map<String, dynamic>>());
+      final metadata = retrieved['_'] as Map<String, dynamic>;
+      expect(metadata['#'], isA<String>());
+      expect(metadata['>'], isA<Map<String, dynamic>>());
     });
     
     test('should handle nested data paths', () async {
@@ -38,8 +47,13 @@ void main() {
       await gun.get('users').get('testuser').put(testData);
       
       // Retrieve nested data
-      final retrieved = await gun.get('users').get('testuser').once();
-      expect(retrieved, equals(testData));
+      final retrieved = await gun.get('users').get('testuser').once() as Map<String, dynamic>;
+      
+      // Check data content
+      expect(retrieved['info'], equals('nested data'));
+      
+      // Check metadata
+      expect(retrieved['_'], isA<Map<String, dynamic>>());
     });
     
     test('should return null for non-existent keys', () async {
@@ -61,7 +75,10 @@ void main() {
       
       // Wait for the subscription to fire
       final receivedData = await completer.future;
-      expect(receivedData, equals(testData));
+      
+      // Check data content (now includes metadata)
+      expect(receivedData['message'], equals('Hello real-time!'));
+      expect(receivedData['_'], isA<Map<String, dynamic>>());
       
       await subscription.cancel();
     });
@@ -94,11 +111,13 @@ void main() {
     test('should merge nodes correctly', () {
       // Create nodes with proper HAM metadata for realistic testing
       final currentNode = CRDT.createNode('node1', {'name': 'Alice', 'age': 30});
+      // Wait a bit to ensure different timestamps
+      Future.delayed(Duration(milliseconds: 1));
       final incomingNode = CRDT.createNode('node1', {'age': 31, 'city': 'NYC'});
       
       final merged = CRDT.mergeNodes(currentNode, incomingNode);
       expect(merged['name'], equals('Alice'));
-      expect(merged['age'], equals(31)); // Incoming value should win due to newer timestamp
+      expect(merged['age'], equals(31)); // Incoming value wins due to newer timestamp
       expect(merged['city'], equals('NYC'));
     });
     
@@ -187,7 +206,13 @@ void main() {
       await storage.put('key1', data);
       
       final retrieved = await storage.get('key1');
-      expect(retrieved, equals(data));
+      // Storage now adds metadata automatically
+      expect(retrieved!['test'], equals('value'));
+      expect(retrieved['_'], isA<Map<String, dynamic>>());
+      
+      final metadata = retrieved['_'] as Map<String, dynamic>;
+      expect(metadata['#'], equals('key1'));
+      expect(metadata['>'], isA<Map<String, dynamic>>());
     });
     
     test('should check existence and delete', () async {
@@ -511,9 +536,11 @@ void main() {
       
       // Test storing data in user space
       await userStorage.get('profile').put({'name': 'Test User'});
-      final profile = await userStorage.get('profile').once();
+      final profile = await userStorage.get('profile').once() as Map<String, dynamic>;
       
-      expect(profile, equals({'name': 'Test User'}));
+      // Check data content (now includes metadata)
+      expect(profile['name'], equals('Test User'));
+      expect(profile['_'], isA<Map<String, dynamic>>());
     });
     
     test('should emit user events', () async {

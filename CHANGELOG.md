@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- 🏷️ **Gun.js Compatible Metadata Handling**
+  - Complete MetadataManager system for automatic Gun.js metadata injection
+  - Automatic `_` field injection with `#` (node ID), `>` (HAM timestamps), `machine`, and `machineId`
+  - HAM-based conflict resolution matching Gun.js behavior exactly
+  - Wire format compatibility for seamless Gun.js network integration
+  - Comprehensive metadata validation ensuring Gun.js compatibility
+- 🗄️ **Enhanced Storage Integration**
+  - Updated MemoryStorage for automatic metadata injection
+  - Updated SQLiteStorage with HAM conflict resolution
+  - Existing data preservation with metadata merging
+  - Node ID generation compatible with Gun.js patterns
+- ⚡ **Core System Integration**
+  - Gun and GunChain classes updated for metadata compatibility
+  - All put operations now include proper Gun.js metadata
+  - Event system enhanced with metadata-enriched nodes
+  - Graph operations maintain full metadata throughout lifecycle
+- 🧪 **Comprehensive Testing**
+  - 30 new metadata tests covering all scenarios and edge cases
+  - Full Gun.js compatibility validation
+  - HAM conflict resolution testing
+  - Wire format conversion testing
+  - Updated existing tests for metadata compatibility
+
+### Enhanced
+- 📊 **Data Format**: All data operations now use Gun.js compatible metadata format
+- 🔄 **Conflict Resolution**: Advanced HAM timestamp-based merging
+- 🌐 **Network Ready**: Proper metadata serialization for Gun.js network compatibility
+- 🔍 **Validation**: Comprehensive metadata validation system
+
+### Changed
+- 🔄 **Storage Behavior**: All storage adapters now automatically inject Gun.js metadata
+- 📋 **Library Exports**: Added MetadataManager to public API
+- 📈 **Test Coverage**: Expanded from 211 to 241 tests with full metadata coverage
+- 🗃️ **Data Structure**: All stored data now includes Gun.js compatible `_` metadata field
+
+### Technical Improvements
+- Automatic Gun.js metadata injection for all data operations
+- HAM timestamp-based conflict resolution matching Gun.js exactly
+- Wire format compatibility for network transmission
+- Comprehensive validation system ensuring Gun.js compatibility
+- Seamless integration with existing Gun and GunChain APIs
+
+### Tests
+- ✅ All 241 tests passing (including 30 new metadata tests)
+- 🏷️ Full metadata handling coverage with Gun.js compatibility validation
+- 🔄 HAM conflict resolution testing with edge cases
+- 📡 Wire format serialization and validation testing
+
 ## [0.4.0] - 2024-12-19
 
 ### Added

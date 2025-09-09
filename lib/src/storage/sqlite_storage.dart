@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'storage_adapter.dart';
+import '../data/metadata_manager.dart';
 
 /// SQLite storage adapter for Gun Dart
 /// Provides persistent storage using SQLite database
@@ -51,8 +52,30 @@ class SQLiteStorage implements StorageAdapter {
   Future<void> put(String key, Map<String, dynamic> data) async {
     _ensureInitialized();
     
+    // Get existing data for metadata merging
+    final existing = await get(key);
+    
+    Map<String, dynamic> nodeData;
+    if (MetadataManager.isValidNode(data)) {
+      // Data already has valid metadata
+      if (existing != null && MetadataManager.isValidNode(existing)) {
+        // Merge with existing data using HAM conflict resolution
+        nodeData = MetadataManager.mergeNodes(existing, data);
+      } else {
+        nodeData = data;
+      }
+    } else {
+      // Add metadata to raw data
+      final nodeId = MetadataManager.generateNodeId(key);
+      nodeData = MetadataManager.addMetadata(
+        nodeId: nodeId,
+        data: data,
+        existingMetadata: existing != null ? MetadataManager.extractMetadata(existing) : null,
+      );
+    }
+    
     final now = DateTime.now().millisecondsSinceEpoch;
-    final value = jsonEncode(data);
+    final value = jsonEncode(nodeData);
     
     await _db!.insert(
       _tableName,

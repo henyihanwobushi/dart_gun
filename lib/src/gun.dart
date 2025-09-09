@@ -8,6 +8,7 @@ import 'network/gun_query.dart';
 import 'types/types.dart';
 import 'types/events.dart';
 import 'data/graph.dart';
+import 'data/metadata_manager.dart';
 import 'auth/user.dart';
 import 'utils/utils.dart';
 
@@ -61,12 +62,22 @@ class Gun {
   /// [callback] - Optional callback for completion
   Future<void> put(Map<String, dynamic> data, [Function? callback]) async {
     try {
+      // Storage adapter will handle metadata automatically
       await _storage.put('', data);
-      _graph.putNode('', data);
+      
+      // Add metadata for the graph as well (if not already present)
+      final nodeData = MetadataManager.isValidNode(data) 
+          ? data 
+          : MetadataManager.addMetadata(
+              nodeId: MetadataManager.generateNodeId(''),
+              data: data,
+            );
+            
+      _graph.putNode('', nodeData);
       _eventController.add(GunEvent(
         type: GunEventType.put,
         key: '',
-        data: data,
+        data: nodeData,
       ));
       callback?.call(null);
     } catch (error) {

@@ -3,6 +3,7 @@ import 'gun.dart';
 import 'network/gun_query.dart';
 import 'types/types.dart';
 import 'types/events.dart';
+import 'data/metadata_manager.dart';
 
 /// Represents a chainable reference to Gun data
 /// Similar to Gun.js chain API
@@ -28,20 +29,29 @@ class GunChain {
       
       if (data is Map<String, dynamic>) {
         dataMap = data;
-        await _gun.storage.put(fullKey, dataMap);
       } else {
         dataMap = {'_': data};
-        await _gun.storage.put(fullKey, dataMap);
       }
       
+      // Storage adapter will handle metadata automatically
+      await _gun.storage.put(fullKey, dataMap);
+      
+      // Add metadata for the graph as well (if not already present)
+      final nodeData = MetadataManager.isValidNode(dataMap) 
+          ? dataMap 
+          : MetadataManager.addMetadata(
+              nodeId: MetadataManager.generateNodeId(fullKey),
+              data: dataMap,
+            );
+      
       // Update the graph
-      _gun.graph.putNode(fullKey, dataMap);
+      _gun.graph.putNode(fullKey, nodeData);
       
       // Emit event for subscribers
       _gun.eventController.add(GunEvent(
         type: GunEventType.put,
         key: fullKey,
-        data: data,
+        data: nodeData,
       ));
       
       callback?.call(null);

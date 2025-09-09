@@ -22,6 +22,7 @@ export 'src/data/graph.dart';
 export 'src/data/node.dart';
 export 'src/data/crdt.dart';
 export 'src/data/crdt_types.dart';
+export 'src/data/metadata_manager.dart';
 
 // Storage exports
 export 'src/storage/storage_adapter.dart';

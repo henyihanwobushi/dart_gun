@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'storage_adapter.dart';
+import '../data/metadata_manager.dart';
 
 /// In-memory storage adapter for Gun Dart
 /// Useful for testing and temporary data
@@ -15,7 +16,30 @@ class MemoryStorage implements StorageAdapter {
   @override
   Future<void> put(String key, Map<String, dynamic> data) async {
     _ensureInitialized();
-    _data[key] = Map.from(data);
+    
+    // Get existing data for metadata merging
+    final existing = _data[key];
+    
+    Map<String, dynamic> nodeData;
+    if (MetadataManager.isValidNode(data)) {
+      // Data already has valid metadata
+      if (existing != null && MetadataManager.isValidNode(existing)) {
+        // Merge with existing data using HAM conflict resolution
+        nodeData = MetadataManager.mergeNodes(existing, data);
+      } else {
+        nodeData = data;
+      }
+    } else {
+      // Add metadata to raw data
+      final nodeId = MetadataManager.generateNodeId(key);
+      nodeData = MetadataManager.addMetadata(
+        nodeId: nodeId,
+        data: data,
+        existingMetadata: existing != null ? MetadataManager.extractMetadata(existing) : null,
+      );
+    }
+    
+    _data[key] = Map.from(nodeData);
   }
   
   @override
