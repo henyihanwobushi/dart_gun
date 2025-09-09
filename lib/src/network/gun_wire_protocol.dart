@@ -1,4 +1,3 @@
-import 'dart:math';
 import '../utils/utils.dart';
 
 /// Gun.js compatible wire protocol implementation
@@ -6,7 +5,6 @@ import '../utils/utils.dart';
 /// This class provides message formatting and parsing that matches
 /// the Gun.js wire protocol exactly for full interoperability.
 class GunWireProtocol {
-  static final Random _random = Random.secure();
   
   /// Create a Gun.js compatible 'get' message
   /// 

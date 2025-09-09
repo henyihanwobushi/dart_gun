@@ -1,6 +1,8 @@
+import 'ham_state.dart';
 
 /// Conflict-free Replicated Data Types implementation for Gun Dart
 /// Based on Gun.js CRDT algorithms for distributed data synchronization
+/// Now uses HAM (Hypothetical Amnesia Machine) for Gun.js compatibility
 class CRDT {
   /// Resolves conflicts between two values based on Gun's HAM (Hypothetical Amnesia Machine)
   /// Returns the value that should be used, or null if both should be rejected
@@ -26,32 +28,86 @@ class CRDT {
     return _deterministicCompare(current, incoming);
   }
   
-  /// Merges two Gun nodes, resolving conflicts for each property
+  /// Merges two Gun nodes using HAM timestamps, resolving conflicts for each property
   static Map<String, dynamic> mergeNodes(Map<String, dynamic> current, 
       Map<String, dynamic> incoming) {
     final result = Map<String, dynamic>.from(current);
     
+    // Extract HAM states from metadata
+    final currentHAM = current.containsKey('_') 
+        ? HAMState.fromWireFormat(current)
+        : HAMState.create('');
+    final incomingHAM = incoming.containsKey('_')
+        ? HAMState.fromWireFormat(incoming) 
+        : HAMState.create('');
+    
+    // Merge HAM state first
+    final mergedHAM = currentHAM.merge(incomingHAM);
+    
     for (final key in incoming.keys) {
       if (key.startsWith('_')) {
-        // Handle metadata fields specially
+        // Handle metadata fields specially - use merged HAM state
         if (key == '_') {
-          // Node metadata - merge timestamps
-          result[key] = _mergeMeta(current[key], incoming[key]);
+          result[key] = mergedHAM.toWireFormat();
         } else {
           result[key] = incoming[key];
         }
       } else {
-        // Regular data field - use CRDT resolution
+        // Regular data field - use HAM-based CRDT resolution
         final currentVal = current[key];
         final incomingVal = incoming[key];
-        final resolved = resolve(currentVal, incomingVal);
-        if (resolved != null) {
-          result[key] = resolved;
+        final resolved = resolveWithHAM(key, currentVal, incomingVal, currentHAM, incomingHAM);
+        if (resolved.value != null) {
+          result[key] = resolved.value;
         }
       }
     }
     
     return result;
+  }
+  
+  /// Merges two Gun nodes using HAM timestamps with explicit HAM states
+  static Map<String, dynamic> mergeNodesWithHAM(
+    Map<String, dynamic> current, 
+    Map<String, dynamic> incoming,
+    HAMState currentHAM,
+    HAMState incomingHAM,
+  ) {
+    final result = Map<String, dynamic>.from(current);
+    
+    // Merge HAM state first
+    final mergedHAM = currentHAM.merge(incomingHAM);
+    
+    for (final key in incoming.keys) {
+      if (key.startsWith('_')) {
+        // Handle metadata fields - use merged HAM state
+        if (key == '_') {
+          result[key] = mergedHAM.toWireFormat();
+        }
+      } else {
+        // Regular data field - use HAM-based resolution
+        final currentVal = current[key];
+        final incomingVal = incoming[key];
+        final resolved = HAMState.resolveConflict(key, currentVal, incomingVal, currentHAM, incomingHAM);
+        result[key] = resolved.value;
+      }
+    }
+    
+    // Ensure metadata is present
+    result['_'] = mergedHAM.toWireFormat();
+    
+    return result;
+  }
+  
+  /// Resolve conflict using HAM timestamps
+  static ResolvedValue resolveWithHAM(
+    String field,
+    dynamic current, 
+    dynamic incoming,
+    HAMState currentHAM,
+    HAMState incomingHAM,
+  ) {
+    return HAMState.resolveConflict(field, current, incoming, currentHAM, incomingHAM);
   }
   
   /// Merges metadata between nodes
@@ -123,12 +179,47 @@ class CRDT {
     return DateTime.now().millisecondsSinceEpoch;
   }
   
-  /// Creates a Gun state vector for a value
+  /// Creates a Gun node with proper HAM metadata
+  static Map<String, dynamic> createNode(String nodeId, Map<String, dynamic> data, [HAMState? hamState]) {
+    var currentHAM = hamState ?? HAMState.create(nodeId);
+    
+    // Update HAM state for all data fields
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    for (final key in data.keys) {
+      currentHAM = currentHAM.updateField(key, timestamp);
+    }
+    
+    final result = Map<String, dynamic>.from(data);
+    result['_'] = currentHAM.toWireFormat();
+    
+    return result;
+  }
+  
+  /// Updates a Gun node with new data and HAM timestamps
+  static Map<String, dynamic> updateNode(
+    Map<String, dynamic> node, 
+    String field, 
+    dynamic value,
+    [HAMState? hamState]
+  ) {
+    final currentHAM = hamState ?? (node.containsKey('_') 
+        ? HAMState.fromWireFormat(node)
+        : HAMState.create(''));
+    
+    final updatedHAM = currentHAM.updateField(field);
+    final result = Map<String, dynamic>.from(node);
+    result[field] = value;
+    result['_'] = updatedHAM.toWireFormat();
+    
+    return result;
+  }
+  
+  /// Creates a Gun state vector for a value (legacy compatibility)
   static Map<String, int> createState(String key, [int? timestamp]) {
     return {key: timestamp ?? generateTimestamp()};
   }
   
-  /// Checks if one state vector is newer than another
+  /// Checks if one state vector is newer than another (legacy compatibility)
   static bool isNewer(Map<String, int>? incoming, Map<String, int>? current) {
     if (incoming == null) return false;
     if (current == null) return true;
@@ -139,5 +230,34 @@ class CRDT {
       if (incomingTime > currentTime) return true;
     }
     return false;
+  }
+  
+  /// Extract HAM state from a Gun node
+  static HAMState extractHAMState(Map<String, dynamic> node) {
+    if (node.containsKey('_')) {
+      return HAMState.fromWireFormat(node);
+    }
+    return HAMState.create('');
+  }
+  
+  /// Check if a node has valid HAM metadata
+  static bool hasValidHAM(Map<String, dynamic> node) {
+    if (!node.containsKey('_')) return false;
+    final meta = node['_'];
+    return meta is Map && meta.containsKey('#') && meta.containsKey('>');
+  }
+  
+  /// Convert legacy vector clock format to HAM format
+  static HAMState vectorClockToHAM(String nodeId, Map<String, int> vectorClock) {
+    final state = <String, num>{};
+    for (final entry in vectorClock.entries) {
+      state[entry.key] = entry.value.toDouble();
+    }
+    return HAMState(
+      state: state,
+      machineState: 0,
+      nodeId: nodeId,
+      machineId: 'legacy',
+    );
   }
 }

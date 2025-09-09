@@ -333,7 +333,7 @@ class TodoService {
   void onTodos(Function(Map<String, dynamic>) callback) {
     if (!gun.user.isAuthenticated) return;
     
-    gun.user.storage.get('todos').on((data) {
+    gun.user.storage.get('todos').on((data, key) {
       if (data != null && data is Map<String, dynamic>) {
         // Filter out null entries (deleted todos)
         final filteredData = Map<String, dynamic>.from(data);

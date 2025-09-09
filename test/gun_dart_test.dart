@@ -92,12 +92,13 @@ void main() {
     });
     
     test('should merge nodes correctly', () {
-      final current = {'name': 'Alice', 'age': 30};
-      final incoming = {'age': 31, 'city': 'NYC'};
+      // Create nodes with proper HAM metadata for realistic testing
+      final currentNode = CRDT.createNode('node1', {'name': 'Alice', 'age': 30});
+      final incomingNode = CRDT.createNode('node1', {'age': 31, 'city': 'NYC'});
       
-      final merged = CRDT.mergeNodes(current, incoming);
+      final merged = CRDT.mergeNodes(currentNode, incomingNode);
       expect(merged['name'], equals('Alice'));
-      expect(merged['age'], equals(31));
+      expect(merged['age'], equals(31)); // Incoming value should win due to newer timestamp
       expect(merged['city'], equals('NYC'));
     });
     
@@ -221,10 +222,9 @@ void main() {
   
   group('Node Data Tests', () {
     test('should create and update GunDataNode', () {
-      final node = GunDataNode(
+      final node = GunDataNode.create(
         id: 'test',
         data: {'name': 'Test'},
-        lastModified: DateTime.now(),
       );
       
       expect(node.id, equals('test'));
@@ -236,10 +236,9 @@ void main() {
     });
     
     test('should handle links in nodes', () {
-      final node = GunDataNode(
+      final node = GunDataNode.create(
         id: 'test',
         data: {},
-        lastModified: DateTime.now(),
       );
       
       final withLink = node.createLink('friend', 'user123');
@@ -251,11 +250,9 @@ void main() {
     });
     
     test('should convert to/from wire format', () {
-      final node = GunDataNode(
+      final node = GunDataNode.create(
         id: 'test',
         data: {'name': 'Alice', 'age': 30},
-        lastModified: DateTime.now(),
-        vectorClock: {'name': 1234567890, 'age': 1234567891},
       );
       
       final wireFormat = node.toWireFormat();

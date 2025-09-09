@@ -127,10 +127,9 @@ void main() async {
   // 7. Advanced node operations
   print('🎯 7. Advanced node operations');
   
-  final node = GunDataNode(
+  final node = GunDataNode.create(
     id: 'advanced_example',
     data: {'original': 'data'},
-    lastModified: DateTime.now(),
   );
   
   final updatedNode = node.setValue('new_field', 'new_value');

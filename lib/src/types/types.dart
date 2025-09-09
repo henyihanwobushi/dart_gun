@@ -1,5 +1,6 @@
 import '../storage/storage_adapter.dart';
 import '../network/peer.dart';
+import '../network/gun_wire_protocol.dart';
 
 /// Configuration options for Gun instance
 class GunOptions {
@@ -134,14 +135,7 @@ enum GunState {
   connected,
 }
 
-/// Message types for Gun protocol
-enum GunMessageType {
-  get,
-  put,
-  hi,
-  bye,
-  dam,
-}
+// GunMessageType moved to gun_wire_protocol.dart to avoid export conflict
 
 /// Represents a message in the Gun protocol
 class GunMessage {

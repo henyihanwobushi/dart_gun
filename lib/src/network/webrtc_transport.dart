@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import '../types/types.dart';
 import 'transport.dart';
 
 /// WebRTC data channel transport for Gun networking
@@ -11,7 +10,7 @@ import 'transport.dart';
 /// 
 /// Note: This is a simplified WebRTC implementation for demonstration.
 /// In production, you would use packages like flutter_webrtc or similar.
-class WebRtcTransport implements Transport {
+class WebRtcTransport extends BaseTransport {
   final String _peerId;
   final Map<String, dynamic> _config;
   
@@ -36,7 +35,8 @@ class WebRtcTransport implements Transport {
           ],
           'iceCandidatePoolSize': 10,
           ...?config,
-        };
+        },
+        super();
 
   @override
   String get url => _connectionUrl ?? 'webrtc://$_peerId';

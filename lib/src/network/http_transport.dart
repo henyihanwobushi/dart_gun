@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../types/types.dart';
 import 'transport.dart';
 
-/// HTTP/HTTPS transport implementation for Gun networking
-/// 
-/// Provides request/response communication with Gun peers over HTTP(S).
+/// HTTP transport implementation for Gun Dart
+/// Provides communication over HTTP/HTTPS protocols
 /// Useful for server-to-server communication or mobile apps communicating
 /// with Gun HTTP endpoints.
-class HttpTransport implements Transport {
+class HttpTransport extends BaseTransport {
   final String _baseUrl;
   final Duration _timeout;
   final Map<String, String> _headers;
@@ -31,7 +29,8 @@ class HttpTransport implements Transport {
           'Accept': 'application/json',
           ...?headers,
         },
-        _client = client ?? http.Client();
+        _client = client ?? http.Client(),
+        super();
 
   @override
   String get url => _baseUrl;

@@ -1,19 +1,24 @@
 import 'dart:async';
 import 'types/types.dart';
 import 'data/node.dart';
-import 'data/crdt.dart';
+import 'data/ham_state.dart';
 
 /// Gun node implementation with full Gun.js-like functionality
 /// This represents an individual node in the Gun graph database
 class GunNodeImpl {
   final String _id;
   final Map<String, dynamic> _data;
-  final Map<String, int> _vectorClock;
+  HAMState _hamState;
   final StreamController<NodeEvent> _eventController = StreamController.broadcast();
   
   GunNodeImpl(this._id, [Map<String, dynamic>? initialData]) 
       : _data = Map.from(initialData ?? {}),
-        _vectorClock = {};
+        _hamState = HAMState.create(_id) {
+    // Initialize HAM state for all existing data
+    if (_data.isNotEmpty) {
+      _hamState = _hamState.updateFields(_data.keys.toList());
+    }
+  }
   
   /// Get the node ID
   String get id => _id;
@@ -21,22 +26,22 @@ class GunNodeImpl {
   /// Get a copy of the current data
   Map<String, dynamic> get data => Map.unmodifiable(_data);
   
-  /// Get the vector clock
-  Map<String, int> get vectorClock => Map.unmodifiable(_vectorClock);
+  /// Get the HAM state
+  HAMState get hamState => _hamState;
   
   /// Get a specific property value
   dynamic getValue(String key) => _data[key];
   
-  /// Set a property value with CRDT semantics
-  void setValue(String key, dynamic value, [int? timestamp]) {
-    final ts = timestamp ?? CRDT.generateTimestamp();
-    final currentTs = _vectorClock[key] ?? 0;
+  /// Set a property value with HAM semantics
+  void setValue(String key, dynamic value, [num? timestamp]) {
+    final ts = timestamp ?? DateTime.now().millisecondsSinceEpoch;
+    final currentTs = _hamState.getFieldTimestamp(key) ?? 0;
     
-    // Only update if timestamp is newer
+    // Only update if timestamp is newer or equal (HAM handles equal case)
     if (ts >= currentTs) {
       final oldValue = _data[key];
       _data[key] = value;
-      _vectorClock[key] = ts;
+      _hamState = _hamState.updateField(key, ts);
       
       // Emit change event
       _eventController.add(NodeEvent(
@@ -53,13 +58,14 @@ class GunNodeImpl {
   void removeValue(String key) {
     if (_data.containsKey(key)) {
       final oldValue = _data.remove(key);
-      _vectorClock.remove(key);
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      _hamState = _hamState.updateField(key, ts);
       
       _eventController.add(NodeEvent(
         type: NodeEventType.valueRemoved,
         key: key,
         oldValue: oldValue,
-        timestamp: CRDT.generateTimestamp(),
+        timestamp: ts,
       ));
     }
   }
@@ -70,26 +76,34 @@ class GunNodeImpl {
   /// Get all property keys
   List<String> get keys => _data.keys.toList();
   
-  /// Merge data from another node using CRDT
-  void merge(Map<String, dynamic> incomingData, [Map<String, int>? incomingClock]) {
-    incomingClock ??= {};
-    
+  /// Merge data from another node using HAM
+  void merge(Map<String, dynamic> incomingData, HAMState incomingHAM) {
     for (final entry in incomingData.entries) {
       final key = entry.key;
       final incomingValue = entry.value;
-      final incomingTs = incomingClock[key] ?? CRDT.generateTimestamp();
-      final currentTs = _vectorClock[key] ?? 0;
+      final currentValue = _data[key];
       
-      if (incomingTs > currentTs) {
-        setValue(key, incomingValue, incomingTs);
-      } else if (incomingTs == currentTs && _data[key] != incomingValue) {
-        // Tie-breaking using deterministic comparison
-        final resolved = CRDT.resolve(_data[key], incomingValue);
-        if (resolved != _data[key]) {
-          setValue(key, resolved, incomingTs);
+      if (currentValue == null) {
+        // New field, use incoming value
+        setValue(key, incomingValue, incomingHAM.getFieldTimestamp(key));
+      } else {
+        // Resolve conflict using HAM
+        final resolved = HAMState.resolveConflict(
+          key,
+          currentValue,
+          incomingValue,
+          _hamState,
+          incomingHAM,
+        );
+        
+        if (resolved.value != currentValue) {
+          setValue(key, resolved.value, resolved.hamState.getFieldTimestamp(key));
         }
       }
     }
+    
+    // Merge HAM states
+    _hamState = _hamState.merge(incomingHAM);
   }
   
   /// Create a link to another node
@@ -125,34 +139,30 @@ class GunNodeImpl {
       id: _id,
       data: Map.from(_data),
       lastModified: DateTime.now(),
-      vectorClock: Map.from(_vectorClock),
+      hamState: _hamState,
     );
   }
   
   /// Update from GunDataNode
   void fromGunDataNode(GunDataNode node) {
-    merge(node.data, node.vectorClock);
+    merge(node.data, node.hamState);
   }
   
   /// Convert to wire format for network transmission
   Map<String, dynamic> toWireFormat() {
     final result = Map<String, dynamic>.from(_data);
-    result['_'] = {
-      '#': _id,
-      '>': _vectorClock,
-    };
+    result['_'] = _hamState.toWireFormat();
     return result;
   }
   
   /// Update from wire format
   void fromWireFormat(Map<String, dynamic> wireData) {
-    final meta = wireData['_'] as Map<String, dynamic>? ?? {};
-    final incomingClock = meta['>'] as Map<String, int>? ?? {};
+    final incomingHAM = HAMState.fromWireFormat(wireData);
     
     final data = Map<String, dynamic>.from(wireData);
     data.remove('_');
     
-    merge(data, incomingClock);
+    merge(data, incomingHAM);
   }
   
   /// Subscribe to node changes
@@ -166,22 +176,22 @@ class GunNodeImpl {
   /// Check if this node is empty
   bool get isEmpty => _data.isEmpty;
   
-  /// Check if this node is newer than another based on vector clocks
-  bool isNewerThan(GunNodeImpl other) {
-    return CRDT.isNewer(_vectorClock, other._vectorClock);
+  /// Check if this node has newer fields than another
+  bool hasNewerFields(GunNodeImpl other) {
+    return _hamState.hasNewerFields(other._hamState);
   }
   
   /// Clear all data from the node
   void clear() {
     final oldData = Map.from(_data);
     _data.clear();
-    _vectorClock.clear();
+    _hamState = HAMState.create(_id);
     
     _eventController.add(NodeEvent(
       type: NodeEventType.nodeCleared,
       key: '',
       oldValue: oldData,
-      timestamp: CRDT.generateTimestamp(),
+      timestamp: DateTime.now().millisecondsSinceEpoch,
     ));
   }
   
@@ -189,7 +199,7 @@ class GunNodeImpl {
   void dispose() {
     _eventController.close();
     _data.clear();
-    _vectorClock.clear();
+    _hamState = HAMState.create(_id);
   }
   
   @override
@@ -220,7 +230,7 @@ class NodeEvent {
   final String key;
   final dynamic oldValue;
   final dynamic newValue;
-  final int timestamp;
+  final num timestamp;
   
   const NodeEvent({
     required this.type,

@@ -87,7 +87,19 @@ class Graph {
     if (fromNode != null) {
       final newData = Map<String, dynamic>.from(fromNode.data);
       newData[property] = {'#': toId};
-      putNode(fromId, newData);
+      
+      // Update the node directly to preserve the link
+      _nodes[fromId] = fromNode.copyWith(
+        data: newData,
+        lastModified: DateTime.now(),
+      );
+      
+      // Emit graph event
+      _eventController.add(GraphEvent(
+        type: GraphEventType.nodeUpdated,
+        nodeId: fromId,
+        data: _nodes[fromId]!.data,
+      ));
     }
   }
   
@@ -104,19 +116,24 @@ class Graph {
   /// Traverse the graph starting from a node
   List<String> traverse(String startId, {int maxDepth = 10}) {
     final visited = <String>{};
-    final toVisit = <String>[startId];
     final result = <String>[];
+    var currentLevel = [startId];
     var depth = 0;
     
-    while (toVisit.isNotEmpty && depth < maxDepth) {
-      final current = toVisit.removeAt(0);
-      if (visited.contains(current)) continue;
+    while (currentLevel.isNotEmpty && depth < maxDepth) {
+      final nextLevel = <String>[];
       
-      visited.add(current);
-      result.add(current);
+      for (final nodeId in currentLevel) {
+        if (visited.contains(nodeId)) continue;
+        
+        visited.add(nodeId);
+        result.add(nodeId);
+        
+        final edges = getEdges(nodeId);
+        nextLevel.addAll(edges.where((id) => !visited.contains(id)));
+      }
       
-      final edges = getEdges(current);
-      toVisit.addAll(edges.where((id) => !visited.contains(id)));
+      currentLevel = nextLevel;
       depth++;
     }
     

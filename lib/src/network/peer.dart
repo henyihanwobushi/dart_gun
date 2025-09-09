@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../types/types.dart';
+import 'gun_wire_protocol.dart';
 import 'transport.dart';
 import 'websocket_transport.dart';
 
@@ -152,6 +153,12 @@ class WebSocketPeer implements Peer {
       case GunMessageType.dam:
         _handleDam(message);
         break;
+      case GunMessageType.ok:
+        _handleOk(message);
+        break;
+      case GunMessageType.unknown:
+        _handleUnknown(message);
+        break;
     }
     
     // Forward to subscribers
@@ -187,6 +194,16 @@ class WebSocketPeer implements Peer {
   /// Handle DAM (Data Acknowledgment Message) messages
   void _handleDam(GunMessage message) {
     print('WebSocketPeer: Received acknowledgment: ${message.data}');
+  }
+  
+  /// Handle OK acknowledgment messages
+  void _handleOk(GunMessage message) {
+    print('WebSocketPeer: Received OK response: ${message.data}');
+  }
+  
+  /// Handle unknown message types
+  void _handleUnknown(GunMessage message) {
+    print('WebSocketPeer: Received unknown message type: ${message.data}');
   }
   
   /// Get peer statistics
