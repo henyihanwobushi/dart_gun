@@ -108,11 +108,11 @@ void main() {
       expect(result2, equals('old'));
     });
     
-    test('should merge nodes correctly', () {
+    test('should merge nodes correctly', () async {
       // Create nodes with proper HAM metadata for realistic testing
       final currentNode = CRDT.createNode('node1', {'name': 'Alice', 'age': 30});
       // Wait a bit to ensure different timestamps
-      Future.delayed(Duration(milliseconds: 1));
+      await Future.delayed(Duration(milliseconds: 2));
       final incomingNode = CRDT.createNode('node1', {'age': 31, 'city': 'NYC'});
       
       final merged = CRDT.mergeNodes(currentNode, incomingNode);
@@ -450,7 +450,7 @@ void main() {
       const alias = 'testuser';
       const password = 'testpass123';
       
-      final account = await gun.user.create(alias, password);
+      final account = await gun.user().create(alias, password);
       
       expect(account.alias, equals(alias));
       expect(account.pub, isNotEmpty);
@@ -461,9 +461,9 @@ void main() {
       const alias = 'duplicate';
       const password = 'password';
       
-      await gun.user.create(alias, password);
+      await gun.user().create(alias, password);
       
-      expect(() async => await gun.user.create(alias, password),
+      expect(() async => await gun.user().create(alias, password),
           throwsA(isA<UserException>()));
     });
     
@@ -472,15 +472,15 @@ void main() {
       const password = 'authpass';
       
       // Create user first
-      await gun.user.create(alias, password);
-      await gun.user.leave();
+      await gun.user().create(alias, password);
+      await gun.user().leave();
       
       // Now authenticate
-      final account = await gun.user.auth(alias, password);
+      final account = await gun.user().auth(alias, password);
       
       expect(account.alias, equals(alias));
-      expect(gun.user.isAuthenticated, isTrue);
-      expect(gun.user.alias, equals(alias));
+      expect(gun.user().isAuthenticated, isTrue);
+      expect(gun.user().alias, equals(alias));
     });
     
     test('should fail authentication with wrong password', () async {
@@ -488,10 +488,10 @@ void main() {
       const correctPassword = 'correct';
       const wrongPassword = 'wrong';
       
-      await gun.user.create(alias, correctPassword);
-      await gun.user.leave();
+      await gun.user().create(alias, correctPassword);
+      await gun.user().leave();
       
-      expect(() async => await gun.user.auth(alias, wrongPassword),
+      expect(() async => await gun.user().auth(alias, wrongPassword),
           throwsA(isA<UserException>()));
     });
     
@@ -499,12 +499,12 @@ void main() {
       const alias = 'signouttest';
       const password = 'password';
       
-      await gun.user.create(alias, password);
-      expect(gun.user.isAuthenticated, isTrue);
+      await gun.user().create(alias, password);
+      expect(gun.user().isAuthenticated, isTrue);
       
-      await gun.user.leave();
-      expect(gun.user.isAuthenticated, isFalse);
-      expect(gun.user.alias, isNull);
+      await gun.user().leave();
+      expect(gun.user().isAuthenticated, isFalse);
+      expect(gun.user().alias, isNull);
     });
     
     test('should encrypt and decrypt user data', () async {
@@ -512,16 +512,16 @@ void main() {
       const password = 'cryptopass';
       const testData = {'secret': 'user data'};
       
-      await gun.user.create(alias, password);
+      await gun.user().create(alias, password);
       
-      final encrypted = await gun.user.encrypt(testData);
-      final decrypted = await gun.user.decrypt(encrypted);
+      final encrypted = await gun.user().encrypt(testData);
+      final decrypted = await gun.user().decrypt(encrypted);
       
       expect(decrypted, equals(testData));
     });
     
     test('should require authentication for encryption', () async {
-      expect(() async => await gun.user.encrypt('data'),
+      expect(() async => await gun.user().encrypt('data'),
           throwsA(isA<UserException>()));
     });
     
@@ -529,9 +529,9 @@ void main() {
       const alias = 'storagetest';
       const password = 'storagepass';
       
-      await gun.user.create(alias, password);
+      await gun.user().create(alias, password);
       
-      final userStorage = gun.user.storage;
+      final userStorage = gun.user().storage;
       expect(userStorage, isNotNull);
       
       // Test storing data in user space
@@ -548,15 +548,15 @@ void main() {
       const password = 'eventpass';
       
       final events = <UserEvent>[];
-      final subscription = gun.user.events.listen((event) => events.add(event));
+      final subscription = gun.user().events.listen((event) => events.add(event));
       
-      await gun.user.create(alias, password);
+      await gun.user().create(alias, password);
       // Give the stream time to process the event
       await Future.delayed(Duration(milliseconds: 10));
       expect(events.length, equals(1));
       expect(events[0].type, equals(UserEventType.created));
       
-      await gun.user.leave();
+      await gun.user().leave();
       // Give the stream time to process the event
       await Future.delayed(Duration(milliseconds: 10));
       expect(events.length, equals(2));

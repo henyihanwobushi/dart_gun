@@ -186,9 +186,10 @@ class HAMState {
   }
   
   /// Generate a HAM-compatible timestamp
-  /// Uses milliseconds since epoch, compatible with Gun.js
+  /// Uses milliseconds since epoch with microsecond precision for uniqueness
   static num _generateTimestamp() {
-    return DateTime.now().millisecondsSinceEpoch;
+    final now = DateTime.now();
+    return now.millisecondsSinceEpoch + (now.microsecond / 1000.0);
   }
   
   /// Resolve conflict between two values using HAM algorithm

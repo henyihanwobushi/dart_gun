@@ -51,10 +51,10 @@ class _TodoHomePageState extends State<TodoHomePage> {
     todoService = TodoService(gun);
     
     // Listen for authentication changes
-    gun.user.events.listen((event) {
+    gun.user().events.listen((event) {
       setState(() {
-        isAuthenticated = gun.user.isAuthenticated;
-        currentUser = gun.user.alias;
+        isAuthenticated = gun.user().isAuthenticated;
+        currentUser = gun.user().alias;
       });
       
       if (isAuthenticated) {
@@ -277,19 +277,19 @@ class AuthService {
   AuthService(this.gun);
 
   Future<UserAccount> signUp(String username, String password) async {
-    return await gun.user.create(username, password);
+    return await gun.user().create(username, password);
   }
 
   Future<UserAccount> signIn(String username, String password) async {
-    return await gun.user.auth(username, password);
+    return await gun.user().auth(username, password);
   }
 
   Future<void> signOut() async {
-    await gun.user.leave();
+    await gun.user().leave();
   }
 
-  bool get isAuthenticated => gun.user.isAuthenticated;
-  String? get currentUser => gun.user.alias;
+  bool get isAuthenticated => gun.user().isAuthenticated;
+  String? get currentUser => gun.user().alias;
 }
 
 class TodoService {
@@ -298,12 +298,12 @@ class TodoService {
   TodoService(this.gun);
 
   Future<void> addTodo(String title) async {
-    if (!gun.user.isAuthenticated) {
+    if (!gun.user().isAuthenticated) {
       throw Exception('User not authenticated');
     }
     
     final todoId = Utils.randomString(16);
-    await gun.user.storage.get('todos').get(todoId).put({
+    await gun.user().storage.get('todos').get(todoId).put({
       'id': todoId,
       'title': title,
       'completed': false,
@@ -312,12 +312,12 @@ class TodoService {
   }
 
   Future<void> toggleTodo(String todoId) async {
-    if (!gun.user.isAuthenticated) return;
+    if (!gun.user().isAuthenticated) return;
     
-    final todo = await gun.user.storage.get('todos').get(todoId).once();
+    final todo = await gun.user().storage.get('todos').get(todoId).once();
     if (todo != null) {
       final completed = !(todo['completed'] as bool? ?? false);
-      await gun.user.storage.get('todos').get(todoId).put({
+      await gun.user().storage.get('todos').get(todoId).put({
         ...todo,
         'completed': completed,
       });
@@ -325,15 +325,15 @@ class TodoService {
   }
 
   Future<void> deleteTodo(String todoId) async {
-    if (!gun.user.isAuthenticated) return;
+    if (!gun.user().isAuthenticated) return;
     
-    await gun.user.storage.get('todos').get(todoId).put(null);
+    await gun.user().storage.get('todos').get(todoId).put(null);
   }
 
   void onTodos(Function(Map<String, dynamic>) callback) {
-    if (!gun.user.isAuthenticated) return;
+    if (!gun.user().isAuthenticated) return;
     
-    gun.user.storage.get('todos').on((data, key) {
+    gun.user().storage.get('todos').on((data, key) {
       if (data != null && data is Map<String, dynamic>) {
         // Filter out null entries (deleted todos)
         final filteredData = Map<String, dynamic>.from(data);

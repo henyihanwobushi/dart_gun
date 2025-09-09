@@ -183,9 +183,10 @@ class CRDT {
   static Map<String, dynamic> createNode(String nodeId, Map<String, dynamic> data, [HAMState? hamState]) {
     var currentHAM = hamState ?? HAMState.create(nodeId);
     
-    // Update HAM state for all data fields
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    // Update HAM state for all data fields with unique timestamps
     for (final key in data.keys) {
+      final timestamp = DateTime.now().millisecondsSinceEpoch + 
+          DateTime.now().microsecond / 1000.0; // Add microsecond precision
       currentHAM = currentHAM.updateField(key, timestamp);
     }
     

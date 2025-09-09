@@ -155,17 +155,36 @@ class GunWireProtocol {
   /// 
   /// Returns a GunWireMessage object with parsed content
   static GunWireMessage parseMessage(Map<String, dynamic> rawMessage) {
-    return GunWireMessage(
-      get: _castToStringDynamicMap(rawMessage['get']),
-      put: _castToStringDynamicMap(rawMessage['put']),
-      hi: _castToStringDynamicMap(rawMessage['hi']),
-      bye: rawMessage['bye'],
-      dam: rawMessage['dam'] as String?,
-      ok: rawMessage['ok'],
-      messageId: rawMessage['@'] as String?,
-      ackId: rawMessage['#'] as String?,
-      raw: rawMessage,
-    );
+    try {
+      // Clean PUT data if present to handle complex Gun.js metadata
+      Map<String, dynamic>? cleanedPut;
+      final rawPut = _castToStringDynamicMap(rawMessage['put']);
+      if (rawPut != null) {
+        cleanedPut = _cleanGunJSMetadata(rawPut);
+      }
+      
+      return GunWireMessage(
+        get: _castToStringDynamicMap(rawMessage['get']),
+        put: cleanedPut,
+        hi: _castToStringDynamicMap(rawMessage['hi']),
+        bye: rawMessage['bye'],
+        dam: _safeStringCast(rawMessage['dam']),
+        ok: rawMessage['ok'],
+        messageId: _safeStringCast(rawMessage['@']),
+        ackId: _safeStringCast(rawMessage['#']),
+        raw: rawMessage,
+      );
+    } catch (e) {
+      print('GunWireProtocol: Error parsing message: $e');
+      // Return a minimal wire message for unknown formats
+      return GunWireMessage(
+        dam: rawMessage['dam']?.toString(),
+        ok: rawMessage['ok'],
+        messageId: rawMessage['@']?.toString(),
+        ackId: rawMessage['#']?.toString(),
+        raw: rawMessage,
+      );
+    }
   }
   
   /// Safely cast to Map<String, dynamic> or return null
@@ -176,6 +195,13 @@ class GunWireProtocol {
       return value.cast<String, dynamic>();
     }
     return null;
+  }
+  
+  /// Safely cast to String or return null
+  static String? _safeStringCast(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return value;
+    return value.toString();
   }
   
   /// Extract HAM state from node data
@@ -222,7 +248,85 @@ class GunWireProtocol {
   
   /// Generate unique peer ID
   static String _generatePeerId() {
-    return Utils.randomString(12);
+    return Utils.randomString(8);
+  }
+  
+  /// Clean up complex Gun.js metadata structures for proper HAM conflict resolution
+  /// Gun.js can send complex nested metadata that needs to be simplified for gun_dart HAM logic
+  static Map<String, dynamic> _cleanGunJSMetadata(Map<String, dynamic> putData) {
+    print('GunWireProtocol: Cleaning Gun.js metadata for: ${putData.keys}');
+    final cleaned = <String, dynamic>{};
+    
+    for (final entry in putData.entries) {
+      final nodeId = entry.key;
+      final nodeData = entry.value;
+      
+      if (nodeData is Map<String, dynamic>) {
+        print('GunWireProtocol: Processing node $nodeId with fields: ${nodeData.keys}');
+        final cleanedNodeData = <String, dynamic>{};
+        
+        // Extract the main data fields and clean up metadata
+        for (final nodeEntry in nodeData.entries) {
+          final fieldKey = nodeEntry.key;
+          final fieldValue = nodeEntry.value;
+          
+          if (fieldKey == '_') {
+            // Handle Gun.js metadata - simplify complex nested structures
+            if (fieldValue is Map<String, dynamic>) {
+              final simplifiedMeta = <String, dynamic>{};
+              
+              // Preserve node ID
+              if (fieldValue.containsKey('#')) {
+                simplifiedMeta['#'] = fieldValue['#'];
+              }
+              
+              // Handle timestamps - flatten nested timestamp structures
+              if (fieldValue.containsKey('>')) {
+                final timestamps = fieldValue['>'];
+                if (timestamps is Map<String, dynamic>) {
+                  final cleanTimestamps = <String, dynamic>{};
+                  
+                  for (final tsEntry in timestamps.entries) {
+                    final tsKey = tsEntry.key;
+                    final tsValue = tsEntry.value;
+                    
+                    // Only include numeric timestamps, ignore nested references
+                    if (tsValue is num && tsKey != '#' && tsKey != '>') {
+                      cleanTimestamps[tsKey] = tsValue;
+                    }
+                  }
+                  
+                  if (cleanTimestamps.isNotEmpty) {
+                    simplifiedMeta['>'] = cleanTimestamps;
+                  }
+                }
+              }
+              
+              print('GunWireProtocol: Simplified metadata for $nodeId: $simplifiedMeta');
+              cleanedNodeData['_'] = simplifiedMeta;
+            } else {
+              cleanedNodeData[fieldKey] = fieldValue;
+            }
+          } else if (fieldKey == '#' || fieldKey == '>') {
+            // Skip top-level metadata fields that should be inside '_'
+            print('GunWireProtocol: Skipping top-level metadata field: $fieldKey');
+            continue;
+          } else {
+            // Regular data field - keep as-is
+            cleanedNodeData[fieldKey] = fieldValue;
+          }
+        }
+        
+        print('GunWireProtocol: Cleaned node $nodeId: $cleanedNodeData');
+        cleaned[nodeId] = cleanedNodeData;
+      } else {
+        // Non-map data, keep as-is
+        cleaned[nodeId] = nodeData;
+      }
+    }
+    
+    print('GunWireProtocol: Final cleaned data: $cleaned');
+    return cleaned;
   }
 }
 

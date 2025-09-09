@@ -6,6 +6,8 @@ import 'storage/memory_storage.dart';
 import 'network/peer.dart';
 import 'network/gun_query.dart';
 import 'network/relay_pool_manager.dart';
+import 'network/gun_error_handler.dart';
+import 'network/gun_wire_protocol.dart';
 import 'types/types.dart';
 import 'types/events.dart';
 import 'data/graph.dart';
@@ -23,6 +25,7 @@ class Gun {
   final StreamController<GunEvent> _eventController = StreamController.broadcast();
   final Graph _graph = Graph();
   final GunQueryManager _queryManager = GunQueryManager();
+  final GunErrorHandler _errorHandler = GunErrorHandler();
   RelayPoolManager? _relayPool;
   late final User _user;
   
@@ -55,9 +58,19 @@ class Gun {
     // Initialize storage
     await _storage.initialize();
     
-    // Connect to peers if any
+    // Connect to peers and set up message handling
     for (final peer in _peers) {
-      peer.connect();
+      if (peer is WebSocketPeer) {
+        // Listen for incoming Gun messages from this peer
+        peer.gunMessages.listen((message) {
+          _handlePeerMessage(message, peer);
+        });
+      }
+      
+      // Connect to peer (this is async but we don't await to allow parallel connections)
+      peer.connect().catchError((error) {
+        print('Gun: Failed to connect to peer ${peer.url}: $error');
+      });
     }
     
     // Start relay pool if configured
@@ -126,7 +139,18 @@ class Gun {
   /// [peer] - The peer to add
   void addPeer(Peer peer) {
     _peers.add(peer);
-    peer.connect();
+    
+    // Set up message listener for WebSocket peers
+    if (peer is WebSocketPeer) {
+      peer.gunMessages.listen((message) {
+        _handlePeerMessage(message, peer);
+      });
+    }
+    
+    // Connect to peer
+    peer.connect().catchError((error) {
+      print('Gun: Failed to connect to peer ${peer.url}: $error');
+    });
   }
   
   /// Get the current storage adapter
@@ -138,14 +162,20 @@ class Gun {
   /// Get the internal graph
   Graph get graph => _graph;
   
-  /// Get the user authentication system
-  User get user => _user;
+  /// Get the user authentication system (Gun.js compatible method)
+  User user() => _user;
   
   /// Get the event controller (for internal use by GunChain)
   StreamController<GunEvent> get eventController => _eventController;
   
   /// Get the query manager (for internal use by GunChain)
   GunQueryManager get queryManager => _queryManager;
+  
+  /// Get the error handler
+  GunErrorHandler get errorHandler => _errorHandler;
+  
+  /// Get error stream
+  Stream<GunError> get errors => _errorHandler.errors;
   
   /// Execute a graph query
   Future<GunQueryResult> executeQuery(GunQuery query, {bool useNetwork = true}) async {
@@ -185,10 +215,24 @@ class Gun {
         }
       }
       
-      // Return result with local data (null is valid in Gun.js)
+      // Wait for potential responses from peers before returning
+      // This is important for Gun.js interoperability where peers respond with PUT messages
+      // Use a more sophisticated approach with shorter intervals and multiple checks
+      Map<String, dynamic>? updatedData;
+      final maxAttempts = 5;
+      final checkInterval = Duration(milliseconds: 200);
+      
+      for (int attempt = 0; attempt < maxAttempts; attempt++) {
+        await Future.delayed(checkInterval);
+        updatedData = await _tryLocalQuery(query);
+        if (updatedData != null) {
+          break; // Found data, stop checking
+        }
+      }
+      
       final result = GunQueryResult(
         query: query,
-        data: localData,
+        data: updatedData,
       );
       
       _queryManager.handleResult(query.queryId, result);
@@ -290,6 +334,86 @@ class Gun {
     }
   }
   
+  /// Handle incoming messages from peers
+  Future<void> _handlePeerMessage(GunMessage message, Peer peer) async {
+    try {
+      switch (message.type) {
+        case GunMessageType.put:
+          await _handleIncomingPut(message, peer);
+          break;
+        case GunMessageType.get:
+          await _handleIncomingGet(message, peer);
+          break;
+        case GunMessageType.hi:
+        case GunMessageType.bye:
+        case GunMessageType.dam:
+        case GunMessageType.ok:
+        case GunMessageType.unknown:
+          // These are handled at the peer level or logged
+          break;
+      }
+    } catch (e) {
+      print('Gun: Error handling peer message: $e');
+    }
+  }
+  
+  /// Handle incoming PUT messages from peers (data synchronization)
+  Future<void> _handleIncomingPut(GunMessage message, Peer peer) async {
+    try {
+      for (final entry in message.data.entries) {
+        final nodeId = entry.key;
+        final nodeData = entry.value;
+        
+        if (nodeData is Map<String, dynamic>) {
+          print('Gun: Received PUT for node $nodeId from peer');
+          
+          // Get existing local data for HAM conflict resolution
+          final existingData = await _storage.get(nodeId);
+          
+          // Merge with HAM logic
+          final mergedData = _mergeWithHAM(existingData, nodeData, nodeId);
+          
+          if (mergedData != null) {
+            // Store the merged data locally
+            await _storage.put(nodeId, mergedData);
+            
+            // Update the graph
+            _graph.putNode(nodeId, mergedData);
+            
+            // Emit event for subscribers (this enables real-time subscriptions!)
+            _eventController.add(GunEvent(
+              type: GunEventType.put,
+              key: nodeId,
+              data: mergedData,
+            ));
+          }
+        }
+      }
+    } catch (e) {
+      print('Gun: Error processing incoming PUT: $e');
+    }
+  }
+  
+  /// Handle incoming GET requests from peers
+  Future<void> _handleIncomingGet(GunMessage message, Peer peer) async {
+    try {
+      final key = message.data['#'] as String?;
+      if (key != null) {
+        // Try to get the requested data from local storage
+        final data = await _storage.get(key);
+        if (data != null) {
+          // Send the data back to the requesting peer
+          await peer.send({
+            'put': {key: data},
+            '#': message.id, // Reply with the original message ID
+          });
+        }
+      }
+    } catch (e) {
+      print('Gun: Error handling incoming GET: $e');
+    }
+  }
+  
   /// Handle incoming messages from relay servers
   void _handleRelayMessage(Map<String, dynamic> message) {
     try {
@@ -338,13 +462,16 @@ class Gun {
   
   /// Handle error messages from relay servers
   void _handleRelayErrorMessage(Map<String, dynamic> message) {
+    // Use proper DAM message handling
+    _errorHandler.handleDAM(message);
+    
+    // Also emit as Gun event for backward compatibility
     final error = message['dam'] as String?;
     if (error != null) {
-      // Emit error event
       _eventController.add(GunEvent(
         type: GunEventType.error,
         key: '',
-        data: {'error': error},
+        data: message,
       ));
     }
   }
@@ -357,6 +484,142 @@ class Gun {
       key: event.relayUrl ?? '',
       data: event.toMap(),
     ));
+  }
+  
+  /// Merge incoming data with existing data using HAM (Hypothetical Amnesia Machine) logic
+  /// 
+  /// This implements Gun.js compatible conflict resolution:
+  /// - Field-level merging based on timestamps
+  /// - Newer timestamps win
+  /// - Missing timestamps are treated as very old
+  Map<String, dynamic>? _mergeWithHAM(
+    Map<String, dynamic>? existing, 
+    Map<String, dynamic> incoming,
+    String nodeId,
+  ) {
+    try {
+      print('HAM: Merging data for node $nodeId');
+      print('HAM: Existing data: $existing');
+      print('HAM: Incoming data: $incoming');
+      
+      // If no existing data, accept incoming data
+      if (existing == null) {
+        print('HAM: No existing data, accepting incoming');
+        return incoming;
+      }
+      
+      // Extract HAM state (timestamps) from both datasets
+      final existingMeta = existing['_'] as Map<String, dynamic>?;
+      final incomingMeta = incoming['_'] as Map<String, dynamic>?;
+      
+      // Handle various timestamp formats from Gun.js
+      final existingState = <String, num>{};
+      final incomingState = <String, num>{};
+      
+      if (existingMeta?['>'] != null) {
+        final stateData = existingMeta!['>'];
+        if (stateData is Map) {
+          for (final entry in stateData.entries) {
+            if (entry.value is num) {
+              existingState[entry.key] = entry.value;
+            } else if (entry.value != null) {
+              // Try to parse as number if it's a string
+              final parsed = num.tryParse(entry.value.toString());
+              if (parsed != null) {
+                existingState[entry.key] = parsed;
+              }
+            }
+          }
+        }
+      }
+      
+      if (incomingMeta?['>'] != null) {
+        final stateData = incomingMeta!['>'];
+        if (stateData is Map) {
+          for (final entry in stateData.entries) {
+            if (entry.value is num) {
+              incomingState[entry.key] = entry.value;
+            } else if (entry.value != null) {
+              // Try to parse as number if it's a string
+              final parsed = num.tryParse(entry.value.toString());
+              if (parsed != null) {
+                incomingState[entry.key] = parsed;
+              }
+            }
+          }
+        }
+      }
+      
+      // Start with existing data
+      final merged = Map<String, dynamic>.from(existing);
+      final mergedState = Map<String, num>.from(existingState);
+      
+      // Process each field in the incoming data
+      for (final entry in incoming.entries) {
+        final field = entry.key;
+        final incomingValue = entry.value;
+        
+        // Skip metadata field
+        if (field == '_') continue;
+        
+        final incomingTimestamp = incomingState[field] ?? 0;
+        final existingTimestamp = existingState[field] ?? 0;
+        
+        // HAM rule: newer timestamp wins, equal timestamps use lexical order
+        // Also handle case where existing field doesn't exist (always accept incoming)
+        bool shouldAccept;
+        
+        print('HAM: Field $field - existing ts: $existingTimestamp, incoming ts: $incomingTimestamp');
+        print('HAM: Field $field - existing val: ${merged[field]}, incoming val: $incomingValue');
+        
+        if (incomingTimestamp > existingTimestamp) {
+          shouldAccept = true; // Newer timestamp always wins
+          print('HAM: Field $field - ACCEPT (newer timestamp)');
+        } else if (incomingTimestamp < existingTimestamp) {
+          shouldAccept = false; // Older timestamp always loses
+          print('HAM: Field $field - REJECT (older timestamp)');
+        } else if (!merged.containsKey(field)) {
+          shouldAccept = true; // Field doesn't exist, accept incoming
+          print('HAM: Field $field - ACCEPT (field does not exist)');
+        } else {
+          // Equal timestamps - use lexical ordering for deterministic conflict resolution
+          final incomingStr = incomingValue?.toString() ?? '';
+          final existingStr = merged[field]?.toString() ?? '';
+          shouldAccept = incomingStr.compareTo(existingStr) > 0;
+          print('HAM: Field $field - LEXICAL (equal timestamps): $shouldAccept');
+        }
+        
+        if (shouldAccept) {
+          print('HAM: Field $field - UPDATED to: $incomingValue');
+          merged[field] = incomingValue;
+          mergedState[field] = incomingTimestamp > 0 ? incomingTimestamp : DateTime.now().millisecondsSinceEpoch;
+        } else {
+          print('HAM: Field $field - KEPT existing: ${merged[field]}');
+        }
+      }
+      
+      // Also handle fields that exist in incoming metadata but not in data
+      // This ensures all timestamp information is preserved
+      for (final stateEntry in incomingState.entries) {
+        final field = stateEntry.key;
+        if (!mergedState.containsKey(field)) {
+          mergedState[field] = stateEntry.value;
+        }
+      }
+      
+      // Update metadata with merged state
+      merged['_'] = {
+        '#': nodeId,
+        '>': mergedState,
+      };
+      
+      return merged;
+      
+    } catch (e) {
+      print('Gun: Error in HAM merge: $e');
+      // Fallback to incoming data if merge fails
+      return incoming;
+    }
   }
   
   /// Close the Gun instance and clean up resources
@@ -379,6 +642,9 @@ class Gun {
     _graph.dispose();
     await _user.dispose();
     _queryManager.clear();
+    
+    // Close error handler
+    await _errorHandler.close();
     
     // Close event controller last
     await _eventController.close();

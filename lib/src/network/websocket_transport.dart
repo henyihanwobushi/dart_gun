@@ -128,24 +128,78 @@ class WebSocketTransport extends BaseTransport {
   void _handleIncomingMessage(dynamic data) {
     try {
       if (data is String) {
-        final message = jsonDecode(data) as Map<String, dynamic>;
-        
-        // Handle ping/pong messages internally
-        if (message['type'] == 'ping') {
-          _sendPong();
+        // Parse JSON safely
+        dynamic parsed;
+        try {
+          parsed = jsonDecode(data);
+        } catch (e) {
+          print('WebSocketTransport: Invalid JSON: $e');
           return;
         }
         
-        if (message['type'] == 'pong') {
-          // Pong received, connection is alive
-          return;
+        // Handle different message formats from Gun.js
+        if (parsed is Map<String, dynamic>) {
+          _handleMapMessage(parsed);
+        } else if (parsed is List) {
+          // Gun.js sometimes sends arrays of messages
+          for (final item in parsed) {
+            if (item is Map<String, dynamic>) {
+              _handleMapMessage(item);
+            }
+          }
+        } else {
+          print('WebSocketTransport: Unexpected message format: ${parsed.runtimeType}');
         }
-        
-        _messagesController.add(message);
       }
     } catch (e) {
-      // Ignore malformed messages
       print('WebSocketTransport: Failed to parse message: $e');
+    }
+  }
+  
+  /// Handle map-based messages from Gun.js
+  void _handleMapMessage(Map<String, dynamic> message) {
+    try {
+      // Debug: log all incoming messages except pings
+      if (message['type'] != 'ping' && message['type'] != 'pong') {
+        print('WebSocketTransport: Received message: $message');
+      }
+      
+      // Handle ping/pong messages internally
+      if (message['type'] == 'ping') {
+        _sendPong();
+        return;
+      }
+      
+      if (message['type'] == 'pong') {
+        // Pong received, connection is alive
+        return;
+      }
+      
+      // Create a clean message map, filtering out Gun.js internal fields
+      final cleanMessage = <String, dynamic>{};
+      
+      // Copy standard Gun.js fields
+      for (final entry in message.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        
+        // Skip Gun.js internal fields that might cause parsing issues
+        if (key == '##' || key == 'FOO' || key == 'pid') {
+          continue; // These are Gun.js internal fields
+        }
+        
+        // Handle null values gracefully
+        if (value != null) {
+          cleanMessage[key] = value;
+        }
+      }
+      
+      // Only forward non-empty messages
+      if (cleanMessage.isNotEmpty) {
+        _messagesController.add(cleanMessage);
+      }
+    } catch (e) {
+      print('WebSocketTransport: Error handling map message: $e');
     }
   }
   

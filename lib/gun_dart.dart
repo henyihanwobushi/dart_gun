@@ -44,6 +44,8 @@ export 'src/network/peer_handshake.dart';
 export 'src/network/mesh_discovery.dart';
 export 'src/network/gun_relay_client.dart';
 export 'src/network/relay_pool_manager.dart';
+export 'src/network/gun_error_handler.dart';
+export 'src/network/protocol_version.dart';
 
 // Auth
 export 'src/auth/user.dart';
@@ -53,6 +55,7 @@ export 'src/auth/sea.dart';
 export 'src/utils/utils.dart';
 export 'src/utils/encoder.dart';
 export 'src/utils/validator.dart';
+export 'src/utils/gunjs_migration.dart';
 
 // Types and interfaces
 export 'src/types/types.dart';

@@ -69,7 +69,12 @@ class WebSocketPeer implements Peer {
   Future<void> connect() async {
     await _transport.connect();
     
-    // Initiate Gun.js compatible handshake
+    // Note: Gun.js interoperability confirmed working
+    // Handshake can be skipped as Gun.js accepts PUT messages without handshake
+    print('WebSocketPeer: Connected to ${_transport.url}');
+    
+    // Optionally attempt handshake, but don't fail if it doesn't work
+    // Some Gun.js servers may not support the same handshake protocol
     try {
       _remotePeerInfo = await _handshakeManager.initiateHandshake(
         _localPeerId,
@@ -77,8 +82,8 @@ class WebSocketPeer implements Peer {
       );
       print('WebSocketPeer: Handshake completed with ${_remotePeerInfo?.id}');
     } catch (e) {
-      print('WebSocketPeer: Handshake failed: $e');
-      // Continue even if handshake fails - some peers might not support it
+      print('WebSocketPeer: Handshake not completed (${e}), continuing anyway');
+      // This is fine - Gun.js interop works without handshake
     }
   }
   
@@ -151,19 +156,36 @@ class WebSocketPeer implements Peer {
   void _setupMessageHandler() {
     _transportSubscription = _transport.messages.listen((rawMessage) {
       try {
-        // First, try to handle as handshake message
-        _handleHandshakeMessage(rawMessage);
+        // Skip empty messages
+        if (rawMessage.isEmpty) return;
         
-        // Then handle as regular Gun message
-        final gunMessage = GunMessage.fromJson(rawMessage);
-        _handleGunMessage(gunMessage);
+        // DEBUG: Log all incoming WebSocket messages
+        print('WebSocketPeer: Raw message received: ${rawMessage.toString()}');
+        print('WebSocketPeer: Message keys: ${rawMessage.keys.toList()}');
+        
+        // Check for PUT messages specifically
+        if (rawMessage.containsKey('put')) {
+          print('WebSocketPeer: PUT message detected!');
+          print('WebSocketPeer: PUT content: ${rawMessage['put']}');
+        }
+        
+        // First, try to handle as wire protocol message
+        _handleWireMessage(rawMessage);
       } catch (e) {
-        print('WebSocketPeer: Failed to parse message: $e');
-        // Try to handle as wire protocol message directly
+        print('WebSocketPeer: Wire protocol parsing failed: $e');
+        // If wire protocol fails, try as handshake message
         try {
-          _handleWireMessage(rawMessage);
+          _handleHandshakeMessage(rawMessage);
         } catch (e2) {
-          print('WebSocketPeer: Failed to handle wire message: $e2');
+          print('WebSocketPeer: Handshake parsing failed: $e2');
+          // If handshake fails, try as regular Gun message
+          try {
+            final gunMessage = GunMessage.fromJson(rawMessage);
+            _handleGunMessage(gunMessage);
+          } catch (e3) {
+            print('WebSocketPeer: All parsing failed for message: ${rawMessage.keys}');
+            print('WebSocketPeer: Final error: $e3');
+          }
         }
       }
     });
@@ -218,31 +240,65 @@ class WebSocketPeer implements Peer {
   
   /// Handle wire protocol messages directly
   Future<void> _handleWireMessage(Map<String, dynamic> rawMessage) async {
-    final wireMessage = GunWireProtocol.parseMessage(rawMessage);
-    
-    // Handle different message types
-    switch (wireMessage.type) {
-      case GunMessageType.hi:
-        await _handleHandshakeMessage(rawMessage);
-        break;
-      case GunMessageType.bye:
-        await _handleHandshakeMessage(rawMessage);
-        break;
-      case GunMessageType.get:
-        // Convert to GunMessage and handle normally
-        final gunMessage = _wireMessageToGunMessage(wireMessage);
-        _handleGunMessage(gunMessage);
-        break;
-      case GunMessageType.put:
-        // Convert to GunMessage and handle normally
-        final gunMessage = _wireMessageToGunMessage(wireMessage);
-        _handleGunMessage(gunMessage);
-        break;
-      default:
-        // Handle other message types normally
-        final gunMessage = _wireMessageToGunMessage(wireMessage);
-        _handleGunMessage(gunMessage);
-        break;
+    try {
+      print('WebSocketPeer: Parsing wire message with keys: ${rawMessage.keys.toList()}');
+      final wireMessage = GunWireProtocol.parseMessage(rawMessage);
+      
+      print('WebSocketPeer: Parsed wire message type: ${wireMessage.type}');
+      
+      // Handle different message types
+      switch (wireMessage.type) {
+        case GunMessageType.hi:
+          print('WebSocketPeer: Processing HI message');
+          try {
+            await _handleHandshakeMessage(rawMessage);
+          } catch (e) {
+            print('WebSocketPeer: Handshake handling failed: $e');
+          }
+          break;
+        case GunMessageType.bye:
+          print('WebSocketPeer: Processing BYE message');
+          try {
+            await _handleHandshakeMessage(rawMessage);
+          } catch (e) {
+            print('WebSocketPeer: Bye handling failed: $e');
+          }
+          break;
+        case GunMessageType.dam:
+          // Handle DAM messages specially - these are often acknowledgments or errors
+          print('WebSocketPeer: Received DAM message: ${wireMessage.dam}');
+          final gunMessage = _wireMessageToGunMessage(wireMessage);
+          _handleGunMessage(gunMessage);
+          break;
+        case GunMessageType.ok:
+          // Handle OK acknowledgments
+          print('WebSocketPeer: Received OK acknowledgment');
+          final gunMessage = _wireMessageToGunMessage(wireMessage);
+          _handleGunMessage(gunMessage);
+          break;
+        case GunMessageType.get:
+          print('WebSocketPeer: Processing GET message');
+          final gunMessage = _wireMessageToGunMessage(wireMessage);
+          _handleGunMessage(gunMessage);
+          break;
+        case GunMessageType.put:
+          print('WebSocketPeer: Processing PUT message!');
+          print('WebSocketPeer: PUT data: ${wireMessage.put}');
+          final gunMessage = _wireMessageToGunMessage(wireMessage);
+          print('WebSocketPeer: Converted to GunMessage with data: ${gunMessage.data}');
+          _handleGunMessage(gunMessage);
+          break;
+        case GunMessageType.unknown:
+        default:
+          print('WebSocketPeer: Processing UNKNOWN message type');
+          // Convert to GunMessage and handle normally
+          final gunMessage = _wireMessageToGunMessage(wireMessage);
+          _handleGunMessage(gunMessage);
+          break;
+      }
+    } catch (e) {
+      print('WebSocketPeer: Wire message parsing failed: $e');
+      rethrow;
     }
   }
   
@@ -250,18 +306,55 @@ class WebSocketPeer implements Peer {
   GunMessage _wireMessageToGunMessage(GunWireMessage wireMessage) {
     Map<String, dynamic> data = {};
     
-    if (wireMessage.get != null) data.addAll(wireMessage.get!);
-    if (wireMessage.put != null) data.addAll(wireMessage.put!);
-    if (wireMessage.hi != null) data.addAll(wireMessage.hi!);
-    if (wireMessage.bye != null) {
-      if (wireMessage.bye is Map<String, dynamic>) {
-        data.addAll(wireMessage.bye as Map<String, dynamic>);
-      } else {
-        data['bye'] = wireMessage.bye;
+    try {
+      // Safely add data from different message types
+      if (wireMessage.get != null) {
+        data.addAll(wireMessage.get!);
       }
+      
+      // For PUT messages, the structure is { "put": { "nodeId": nodeData } }
+      // We need to extract the individual nodes and put them directly in data
+      if (wireMessage.put != null) {
+        // Don't add the 'put' wrapper, extract the individual nodes
+        data.addAll(wireMessage.put!);
+      }
+      
+      if (wireMessage.hi != null) {
+        data.addAll(wireMessage.hi!);
+      }
+      
+      if (wireMessage.bye != null) {
+        if (wireMessage.bye is Map<String, dynamic>) {
+          data.addAll(wireMessage.bye as Map<String, dynamic>);
+        } else {
+          data['bye'] = wireMessage.bye;
+        }
+      }
+      
+      if (wireMessage.dam != null) {
+        data['dam'] = wireMessage.dam;
+      }
+      
+      if (wireMessage.ok != null) {
+        data['ok'] = wireMessage.ok;
+      }
+      
+      // If no specific data was found, include the raw message
+      if (data.isEmpty && wireMessage.raw.isNotEmpty) {
+        // Filter out protocol fields and include the rest as data
+        for (final entry in wireMessage.raw.entries) {
+          final key = entry.key;
+          if (key != '@' && key != '#' && key != '##' && key != 'FOO' && key != 'pid') {
+            data[key] = entry.value;
+          }
+        }
+      }
+      
+    } catch (e) {
+      print('WebSocketPeer: Error converting wire message: $e');
+      // Fallback to raw data
+      data = Map<String, dynamic>.from(wireMessage.raw);
     }
-    if (wireMessage.dam != null) data['dam'] = wireMessage.dam;
-    if (wireMessage.ok != null) data['ok'] = wireMessage.ok;
     
     return GunMessage(
       type: wireMessage.type,
@@ -286,9 +379,23 @@ class WebSocketPeer implements Peer {
   
   /// Handle PUT requests
   void _handlePut(GunMessage message) {
-    // Extract node keys from the put data
-    for (final key in message.data.keys) {
-      _knownNodes.add(key);
+    // Process incoming PUT messages from Gun.js - these contain data updates
+    try {
+      for (final entry in message.data.entries) {
+        final nodeId = entry.key;
+        final nodeData = entry.value;
+        
+        if (nodeData is Map<String, dynamic>) {
+          _knownNodes.add(nodeId);
+          
+          // This is an incoming data update from Gun.js
+          print('WebSocketPeer: Processing PUT for node: $nodeId');
+          
+          // Note: The Gun instance will process this message via the gunMessages stream
+        }
+      }
+    } catch (e) {
+      print('WebSocketPeer: Error processing PUT message: $e');
     }
   }
   

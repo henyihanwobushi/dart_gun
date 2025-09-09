@@ -158,6 +158,42 @@ class User {
     );
   }
 
+  /// Get the user's data space (Gun.js compatible ~@alias path)
+  GunChain get data {
+    if (!_isAuthenticated || _alias == null) {
+      throw UserException('User not authenticated');
+    }
+    return _gun.get('~@$_alias');
+  }
+
+  /// Get the user's public key space (Gun.js compatible ~publickey path)
+  GunChain get publicSpace {
+    if (!_isAuthenticated || _keyPair == null) {
+      throw UserException('User not authenticated');
+    }
+    return _gun.get('~${_keyPair!.pub}');
+  }
+
+  /// Get a specific path in user's data space
+  GunChain getUserPath(String path) {
+    if (!_isAuthenticated || _alias == null) {
+      throw UserException('User not authenticated');
+    }
+    return _gun.get('~@$_alias').get(path);
+  }
+
+  /// Resolve user alias to public key
+  Future<String?> aliasToPublicKey(String alias) async {
+    final userData = await _gun.get('~@$alias').once() as Map<String, dynamic>?;
+    return userData?['pub'] as String?;
+  }
+
+  /// Resolve public key to alias (if available)
+  Future<String?> publicKeyToAlias(String publicKey) async {
+    final userData = await _gun.get('~$publicKey').once() as Map<String, dynamic>?;
+    return userData?['alias'] as String?;
+  }
+
   /// Encrypt data for current user
   Future<String> encrypt(dynamic data, [String? forPublicKey]) async {
     if (!_isAuthenticated || _keyPair == null) {

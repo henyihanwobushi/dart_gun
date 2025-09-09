@@ -178,14 +178,14 @@ abstract class BaseTransport implements Transport {
     try {
       final wireMessage = GunWireProtocol.parseMessage(rawMessage);
       
-      // Handle acknowledgments and errors
-      if (wireMessage.isAck && wireMessage.ackId != null) {
+      // Handle acknowledgments and errors - check for null values
+      if (wireMessage.isAck && wireMessage.ackId != null && wireMessage.messageId != null) {
         _messageTracker.handleAck(
           wireMessage.ackId!, 
           wireMessage.messageId!,
           result: wireMessage.ok,
         );
-      } else if (wireMessage.isError && wireMessage.ackId != null) {
+      } else if (wireMessage.isError && wireMessage.ackId != null && wireMessage.dam != null) {
         _messageTracker.handleError(
           wireMessage.ackId!,
           wireMessage.dam!,
@@ -195,8 +195,8 @@ abstract class BaseTransport implements Transport {
       // Send to wire message stream
       _wireMessageController.add(wireMessage);
       
-      // Send acknowledgment for messages that require it
-      if (wireMessage.requiresAck && !wireMessage.isAck) {
+      // Send acknowledgment for messages that require it - check messageId is not null
+      if (wireMessage.requiresAck && !wireMessage.isAck && wireMessage.messageId != null) {
         sendAck(wireMessage.messageId!);
       }
       

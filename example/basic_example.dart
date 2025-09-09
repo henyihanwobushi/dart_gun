@@ -167,13 +167,13 @@ void main() async {
   // User authentication
   print('\n👤 User Authentication:');
   try {
-    final account = await gun.user.create('testuser', 'testpass123');
+    final account = await gun.user().create('testuser', 'testpass123');
     print('   User created: ${account.alias}');
-    print('   User authenticated: ${gun.user.isAuthenticated}');
+    print('   User authenticated: ${gun.user().isAuthenticated}');
     
     // User-specific encrypted storage
-    final userSecret = await gun.user.encrypt('user private data');
-    final userDecrypted = await gun.user.decrypt(userSecret);
+    final userSecret = await gun.user().encrypt('user private data');
+    final userDecrypted = await gun.user().decrypt(userSecret);
     print('   User data encryption works: ${userDecrypted == 'user private data'}');
   } catch (e) {
     print('   User demo: ${e.toString().substring(0, 50)}...');
