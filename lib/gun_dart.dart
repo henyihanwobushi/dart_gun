@@ -39,6 +39,8 @@ export 'src/network/webrtc_transport.dart';
 export 'src/network/gun_wire_protocol.dart';
 export 'src/network/message_tracker.dart';
 export 'src/network/gun_query.dart';
+export 'src/network/peer_handshake.dart';
+export 'src/network/mesh_discovery.dart';
 
 // Auth
 export 'src/auth/user.dart';

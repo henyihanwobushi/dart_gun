@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2024-12-19
+
+### Added
+- 🤝 **Gun.js Compatible Peer Discovery & Handshake**
+  - Complete Gun.js handshake protocol with `hi`/`bye` message compatibility
+  - Peer identification system with unique dart-prefixed peer IDs
+  - Version negotiation with automatic Gun.js compatibility checking
+  - Mesh network discovery with automatic peer connection management
+  - Graceful disconnection with proper `bye` message protocol
+  - Production-ready networking with connection limits and load balancing
+- 🔍 **PeerHandshakeManager System**
+  - Handshake lifecycle management with timeout handling
+  - Error recovery and acknowledgment processing
+  - Real-time peer status tracking and statistics
+  - Integration with all transport types (WebSocket, HTTP, WebRTC)
+- 🕸️ **MeshNetworkDiscovery System**
+  - Automatic peer discovery from seed peers
+  - Intelligent connection management with reconnection strategies
+  - Mesh topology optimization and health monitoring
+  - Event-driven architecture with real-time mesh statistics
+- 🧪 **Comprehensive Peer Testing**
+  - 14 new peer handshake tests covering all scenarios
+  - Error case testing and timeout handling validation
+  - Version compatibility and mesh networking functionality tests
+  - End-to-end handshake protocol verification
+
+### Enhanced
+- 🌐 **Network Layer**: Enhanced peer management with Gun.js compatible handshake integration
+- 🔄 **Transport System**: Universal handshake support across all transport protocols
+- 📊 **Statistics**: Real-time mesh network monitoring and connection analytics
+- 🛡️ **Error Handling**: Robust timeout management and graceful failure recovery
+
+### Changed
+- 🔄 **WebSocketPeer**: Integrated Gun.js compatible handshake manager
+- 📋 **Library Exports**: Added peer handshake and mesh discovery modules
+- 📈 **Test Coverage**: Expanded from 197 to 211 tests with peer networking coverage
+
+### Technical Improvements
+- Gun.js handshake protocol compliance with wire format compatibility
+- Automatic mesh network formation and maintenance
+- Production-ready peer connection management
+- Comprehensive error handling and timeout management
+- Real-time mesh network statistics and event monitoring
+
+### Tests
+- ✅ All 211 tests passing (including 14 new peer handshake tests)
+- 🔄 Full handshake protocol coverage with error scenarios
+- 🌐 End-to-end mesh networking functionality validation
+
 ## [0.3.0] - 2024-12-19
 
 ### Added

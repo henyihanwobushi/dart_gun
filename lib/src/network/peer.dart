@@ -3,6 +3,8 @@ import '../types/types.dart';
 import 'gun_wire_protocol.dart';
 import 'transport.dart';
 import 'websocket_transport.dart';
+import 'peer_handshake.dart';
+import '../utils/utils.dart';
 
 /// Abstract peer interface for Gun network layer
 abstract class Peer {
@@ -33,7 +35,10 @@ class WebSocketPeer implements Peer {
   final Transport _transport;
   final StreamController<GunMessage> _incomingMessages = StreamController.broadcast();
   final Set<String> _knownNodes = {};
+  final PeerHandshakeManager _handshakeManager = PeerHandshakeManager();
   late StreamSubscription _transportSubscription;
+  late String _localPeerId;
+  PeerInfo? _remotePeerInfo;
   
   /// Create a WebSocket peer
   /// 
@@ -41,6 +46,7 @@ class WebSocketPeer implements Peer {
   /// [transport] - Optional transport implementation (defaults to WebSocketTransport)
   WebSocketPeer(String url, [Transport? transport])
       : _transport = transport ?? WebSocketTransport(url) {
+    _localPeerId = _handshakeManager.generatePeerId();
     _setupMessageHandler();
   }
   
@@ -63,12 +69,31 @@ class WebSocketPeer implements Peer {
   Future<void> connect() async {
     await _transport.connect();
     
-    // Send handshake message
-    await _sendHandshake();
+    // Initiate Gun.js compatible handshake
+    try {
+      _remotePeerInfo = await _handshakeManager.initiateHandshake(
+        _localPeerId,
+        (message) => _transport.send(message),
+      );
+      print('WebSocketPeer: Handshake completed with ${_remotePeerInfo?.id}');
+    } catch (e) {
+      print('WebSocketPeer: Handshake failed: $e');
+      // Continue even if handshake fails - some peers might not support it
+    }
   }
   
   @override
   Future<void> disconnect() async {
+    // Send bye messages to all connected peers
+    try {
+      final byeMessages = await _handshakeManager.disconnectAll(_localPeerId);
+      for (final message in byeMessages) {
+        await _transport.send(message);
+      }
+    } catch (e) {
+      print('WebSocketPeer: Error sending bye messages: $e');
+    }
+    
     await _transport.disconnect();
   }
   
@@ -81,6 +106,7 @@ class WebSocketPeer implements Peer {
   Future<void> close() async {
     await _transportSubscription.cancel();
     await _incomingMessages.close();
+    await _handshakeManager.dispose();
     await _transport.close();
   }
   
@@ -109,28 +135,36 @@ class WebSocketPeer implements Peer {
     await sendGunMessage(message);
   }
   
-  /// Send handshake to establish Gun protocol
-  Future<void> _sendHandshake() async {
-    final handshake = GunMessage(
-      type: GunMessageType.hi,
-      data: {
-        'protocol': 'gun',
-        'version': '0.2020.1239',
-        'peer': 'gun_dart',
-      },
-      timestamp: DateTime.now(),
-    );
-    await sendGunMessage(handshake);
-  }
+  /// Get local peer ID
+  String get localPeerId => _localPeerId;
+  
+  /// Get remote peer info
+  PeerInfo? get remotePeerInfo => _remotePeerInfo;
+  
+  /// Get handshake statistics
+  HandshakeStats get handshakeStats => _handshakeManager.getStats();
+  
+  /// Get connected peers from handshake manager
+  List<PeerInfo> get connectedPeers => _handshakeManager.getConnectedPeers();
   
   /// Setup message handler to convert transport messages to Gun messages
   void _setupMessageHandler() {
     _transportSubscription = _transport.messages.listen((rawMessage) {
       try {
+        // First, try to handle as handshake message
+        _handleHandshakeMessage(rawMessage);
+        
+        // Then handle as regular Gun message
         final gunMessage = GunMessage.fromJson(rawMessage);
         _handleGunMessage(gunMessage);
       } catch (e) {
-        print('WebSocketPeer: Failed to parse Gun message: $e');
+        print('WebSocketPeer: Failed to parse message: $e');
+        // Try to handle as wire protocol message directly
+        try {
+          _handleWireMessage(rawMessage);
+        } catch (e2) {
+          print('WebSocketPeer: Failed to handle wire message: $e2');
+        }
       }
     });
   }
@@ -165,9 +199,81 @@ class WebSocketPeer implements Peer {
     _incomingMessages.add(message);
   }
   
-  /// Handle handshake messages
+  /// Handle incoming handshake messages
+  Future<void> _handleHandshakeMessage(Map<String, dynamic> rawMessage) async {
+    try {
+      final responseMessage = await _handshakeManager.handleHandshakeMessage(
+        rawMessage,
+        _localPeerId,
+        (message) => _transport.send(message),
+      );
+      
+      if (responseMessage != null) {
+        await _transport.send(responseMessage);
+      }
+    } catch (e) {
+      print('WebSocketPeer: Error handling handshake: $e');
+    }
+  }
+  
+  /// Handle wire protocol messages directly
+  Future<void> _handleWireMessage(Map<String, dynamic> rawMessage) async {
+    final wireMessage = GunWireProtocol.parseMessage(rawMessage);
+    
+    // Handle different message types
+    switch (wireMessage.type) {
+      case GunMessageType.hi:
+        await _handleHandshakeMessage(rawMessage);
+        break;
+      case GunMessageType.bye:
+        await _handleHandshakeMessage(rawMessage);
+        break;
+      case GunMessageType.get:
+        // Convert to GunMessage and handle normally
+        final gunMessage = _wireMessageToGunMessage(wireMessage);
+        _handleGunMessage(gunMessage);
+        break;
+      case GunMessageType.put:
+        // Convert to GunMessage and handle normally
+        final gunMessage = _wireMessageToGunMessage(wireMessage);
+        _handleGunMessage(gunMessage);
+        break;
+      default:
+        // Handle other message types normally
+        final gunMessage = _wireMessageToGunMessage(wireMessage);
+        _handleGunMessage(gunMessage);
+        break;
+    }
+  }
+  
+  /// Convert wire message to Gun message format
+  GunMessage _wireMessageToGunMessage(GunWireMessage wireMessage) {
+    Map<String, dynamic> data = {};
+    
+    if (wireMessage.get != null) data.addAll(wireMessage.get!);
+    if (wireMessage.put != null) data.addAll(wireMessage.put!);
+    if (wireMessage.hi != null) data.addAll(wireMessage.hi!);
+    if (wireMessage.bye != null) {
+      if (wireMessage.bye is Map<String, dynamic>) {
+        data.addAll(wireMessage.bye as Map<String, dynamic>);
+      } else {
+        data['bye'] = wireMessage.bye;
+      }
+    }
+    if (wireMessage.dam != null) data['dam'] = wireMessage.dam;
+    if (wireMessage.ok != null) data['ok'] = wireMessage.ok;
+    
+    return GunMessage(
+      type: wireMessage.type,
+      data: data,
+      id: wireMessage.messageId,
+      timestamp: DateTime.now(),
+    );
+  }
+  
+  /// Handle handshake messages (legacy method)
   void _handleHandshake(GunMessage message) {
-    print('WebSocketPeer: Received handshake from ${message.data}');
+    print('WebSocketPeer: Received legacy handshake from ${message.data}');
   }
   
   /// Handle GET requests
