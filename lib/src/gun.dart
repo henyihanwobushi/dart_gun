@@ -89,10 +89,7 @@ class Gun {
     }
   }
   
-  /// Get a reference to a node by key
-  /// 
-  /// This is the primary method for accessing data in Gun
-  /// Similar to gun.get(key) in Gun.js
+  /// Get a reference to a graph node by key
   GunChain get(String key) {
     return GunChain(this, key);
   }
@@ -178,75 +175,86 @@ class Gun {
   Stream<GunError> get errors => _errorHandler.errors;
   
   /// Execute a graph query
-  Future<GunQueryResult> executeQuery(GunQuery query, {bool useNetwork = true}) async {
-    try {
-      // Track the query
-      _queryManager.trackQuery(query);
-      
-      // First, try local storage
-      final localData = await _tryLocalQuery(query);
-      
-      // If we have local data or network is disabled, return immediately
-      if (localData != null || !useNetwork) {
-        final result = GunQueryResult(
-          query: query,
-          data: localData,
-        );
-        
-        _queryManager.handleResult(query.queryId, result);
-        return result;
+  Future<GunQueryResult> executeQuery(GunQuery query) async {
+    // Track the query for timeout and result handling
+    _queryManager.trackQuery(query);
+    
+    // Create a completer to handle the async result
+    final completer = Completer<GunQueryResult>();
+    
+    // Add a timeout to prevent tests from hanging
+    Timer(const Duration(seconds: 5), () {
+      if (!completer.isCompleted) {
+        completer.complete(GunQueryResult(query: query, data: null));
       }
-      
-      // Send query to relay servers first (if available)
-      if (_relayPool != null) {
-        try {
-          await _relayPool!.sendGetQuery(query.nodeId, path: query.path);
-        } catch (e) {
-          // Relay query failed, continue with peers
+    });
+    
+    // Set up a callback to complete the future when we get a result
+    final enhancedQuery = GunQuery(
+      nodeId: query.nodeId,
+      path: query.path,
+      queryId: query.queryId,
+      callback: (data, error) {
+        if (!completer.isCompleted) {
+          if (error != null) {
+            completer.complete(GunQueryResult(query: query, error: error));
+          } else {
+            final result = GunQueryResult(query: query, data: data as Map<String, dynamic>?);
+            // Note: enhancements (filter/map) are applied in GunChain after unflattening
+            completer.complete(result);
+          }
         }
+      },
+      filterFn: query.filterFn,
+      mapFn: query.mapFn,
+    );
+    
+    // Broadcast the query to relay servers first (if available)
+    if (_relayPool != null) {
+      try {
+        await _relayPool!.sendGetQuery(query.nodeId, path: query.path);
+      } catch (e) {
+        // Ignore relay errors and continue with peers
+        print('Gun: Relay query failed: $e');
       }
-      
-      // Send query to peers if no local data and network is enabled
-      final wireMessage = query.toWireFormat();
-      
-      for (final peer in _peers) {
-        if (peer.isConnected) {
-          await peer.send(wireMessage);
-        }
-      }
-      
-      // Wait for potential responses from peers before returning
-      // This is important for Gun.js interoperability where peers respond with PUT messages
-      // Use a more sophisticated approach with shorter intervals and multiple checks
-      Map<String, dynamic>? updatedData;
-      final maxAttempts = 5;
-      final checkInterval = Duration(milliseconds: 200);
-      
-      for (int attempt = 0; attempt < maxAttempts; attempt++) {
-        await Future.delayed(checkInterval);
-        updatedData = await _tryLocalQuery(query);
-        if (updatedData != null) {
-          break; // Found data, stop checking
-        }
-      }
-      
-      final result = GunQueryResult(
-        query: query,
-        data: updatedData,
-      );
-      
-      _queryManager.handleResult(query.queryId, result);
-      return result;
-      
-    } catch (error) {
-      final result = GunQueryResult(
-        query: query,
-        error: error.toString(),
-      );
-      
-      _queryManager.handleResult(query.queryId, result);
-      return result;
     }
+    
+    // Broadcast the query to all peers
+    final wireQuery = enhancedQuery.toWireFormat();
+    for (final peer in _peers) {
+      if (peer.isConnected) {
+        try {
+          await peer.send(wireQuery);
+        } catch (e) {
+          // Ignore peer sending errors
+          print('Gun: Peer query failed: $e');
+        }
+      }
+    }
+    
+    // Also check local storage for immediate response
+    final localData = await _getLocalData(enhancedQuery);
+    if (localData != null) {
+      // Note: enhancements (filter/map) are applied in GunChain after unflattening
+      final localResult = GunQueryResult(query: enhancedQuery, data: localData);
+      return localResult;
+    }
+    
+    // If there is no network path available, return immediately with null data
+    final hasConnectedPeers = _peers.any((p) => p.isConnected);
+    final hasRelay = _relayPool != null;
+    if (!hasConnectedPeers && !hasRelay) {
+      return GunQueryResult(query: enhancedQuery, data: null);
+    }
+    
+    // Return the future result (will be completed by network responses or timeout)
+    return completer.future;
+  }
+
+  /// Get data from local storage for a query
+  Future<Map<String, dynamic>?> _getLocalData(GunQuery query) async {
+    final fullKey = query.fullPath.join('/');
+    return await _storage.get(fullKey);
   }
   
   /// Try to resolve query from local storage
@@ -258,13 +266,13 @@ class Gun {
       return null;
     }
   }
-  
+
   /// Handle incoming query from peer
   Future<void> handleIncomingQuery(GunQuery query, String peerId) async {
     try {
       // Try to resolve the query locally
       final data = await _tryLocalQuery(query);
-      
+
       if (data != null) {
         // Send response back to the peer
         final response = {
@@ -272,13 +280,15 @@ class Gun {
           '#': query.queryId, // Acknowledge the query
           '@': Utils.randomString(8),
         };
-        
+
         // Find the peer and send response
         final peer = _peers.firstWhere(
           (p) => p.url.contains(peerId),
-          orElse: () => _peers.isNotEmpty ? _peers.first : throw StateError('No peers available'),
+          orElse: () => _peers.isNotEmpty
+              ? _peers.first
+              : throw StateError('No peers available'),
         );
-        
+
         if (peer.isConnected) {
           await peer.send(response);
         }
@@ -290,7 +300,7 @@ class Gun {
         '#': query.queryId,
         '@': Utils.randomString(8),
       };
-      
+
       try {
         final peer = _peers.first;
         if (peer.isConnected) {
@@ -301,7 +311,7 @@ class Gun {
       }
     }
   }
-  
+
   /// Get relay pool manager (if configured)
   RelayPoolManager? get relayPool => _relayPool;
   

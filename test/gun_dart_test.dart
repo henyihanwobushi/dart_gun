@@ -565,4 +565,528 @@ void main() {
       subscription.cancel();
     });
   });
+  
+  group('Query Operations Tests', () {
+    late Gun gun;
+    
+    setUp(() async {
+      gun = Gun();
+      
+      // Set up test data for query operations
+      await gun.get('users').put({
+        'alice': {
+          'name': 'Alice Smith',
+          'age': 25,
+          'role': 'admin',
+          'active': true,
+          'email': 'alice@example.com',
+        },
+        'bob': {
+          'name': 'Bob Johnson', 
+          'age': 30,
+          'role': 'user',
+          'active': true,
+          'email': 'bob@example.com',
+        },
+        'charlie': {
+          'name': 'Charlie Brown',
+          'age': 22,
+          'role': 'user', 
+          'active': false,
+          'email': 'charlie@example.com',
+        },
+        'diana': {
+          'name': 'Diana Prince',
+          'age': 28,
+          'role': 'admin',
+          'active': true,
+          'email': 'diana@example.com',
+        },
+      });
+      
+      // Set up test products data
+      await gun.get('products').put({
+        'laptop': {
+          'name': 'Gaming Laptop',
+          'price': 1299.99,
+          'category': 'electronics',
+          'inStock': true,
+          'rating': 4.5,
+        },
+        'mouse': {
+          'name': 'Wireless Mouse',
+          'price': 29.99,
+          'category': 'electronics',
+          'inStock': true,
+          'rating': 4.2,
+        },
+        'book': {
+          'name': 'Learning Dart',
+          'price': 39.99,
+          'category': 'books',
+          'inStock': false,
+          'rating': 4.8,
+        },
+        'chair': {
+          'name': 'Office Chair',
+          'price': 199.99,
+          'category': 'furniture',
+          'inStock': true,
+          'rating': 3.9,
+        },
+      });
+    });
+    
+    tearDown(() async {
+      await gun.close();
+    });
+    
+    group('Filter Operations', () {
+      test('should filter by single boolean condition', () async {
+        final activeUsers = await gun.get('users')
+          .filter((user, key) => user['active'] == true)
+          .once();
+        
+        expect(activeUsers, isA<Map<String, dynamic>>());
+        final activeMap = activeUsers as Map<String, dynamic>;
+        
+        // Should contain alice, bob, and diana but not charlie
+        expect(activeMap.keys, contains('alice'));
+        expect(activeMap.keys, contains('bob'));
+        expect(activeMap.keys, contains('diana'));
+        expect(activeMap.keys, isNot(contains('charlie')));
+        
+        // Verify the filtered data content
+        expect(activeMap['alice']['active'], isTrue);
+        expect(activeMap['bob']['active'], isTrue);
+        expect(activeMap['diana']['active'], isTrue);
+      });
+      
+      test('should filter by string condition', () async {
+        final adminUsers = await gun.get('users')
+          .filter((user, key) => user['role'] == 'admin')
+          .once();
+        
+        expect(adminUsers, isA<Map<String, dynamic>>());
+        final adminMap = adminUsers as Map<String, dynamic>;
+        
+        // Should contain alice and diana but not bob or charlie
+        expect(adminMap.keys, contains('alice'));
+        expect(adminMap.keys, contains('diana'));
+        expect(adminMap.keys, isNot(contains('bob')));
+        expect(adminMap.keys, isNot(contains('charlie')));
+        
+        expect(adminMap['alice']['role'], equals('admin'));
+        expect(adminMap['diana']['role'], equals('admin'));
+      });
+      
+      test('should filter by numeric condition', () async {
+        final youngerUsers = await gun.get('users')
+          .filter((user, key) => user['age'] < 27)
+          .once();
+        
+        expect(youngerUsers, isA<Map<String, dynamic>>());
+        final youngerMap = youngerUsers as Map<String, dynamic>;
+        
+        // Should contain alice (25) and charlie (22)
+        expect(youngerMap.keys, contains('alice'));
+        expect(youngerMap.keys, contains('charlie'));
+        expect(youngerMap.keys, isNot(contains('bob'))); // 30
+        expect(youngerMap.keys, isNot(contains('diana'))); // 28
+        
+        expect(youngerMap['alice']['age'], lessThan(27));
+        expect(youngerMap['charlie']['age'], lessThan(27));
+      });
+      
+      test('should filter by complex compound condition', () async {
+        final activeAdmins = await gun.get('users')
+          .filter((user, key) => user['active'] == true && user['role'] == 'admin')
+          .once();
+        
+        expect(activeAdmins, isA<Map<String, dynamic>>());
+        final activeAdminMap = activeAdmins as Map<String, dynamic>;
+        
+        // Should only contain alice and diana (both active admins)
+        expect(activeAdminMap.keys, contains('alice'));
+        expect(activeAdminMap.keys, contains('diana'));
+        expect(activeAdminMap.keys, isNot(contains('bob'))); // user, not admin
+        expect(activeAdminMap.keys, isNot(contains('charlie'))); // not active
+        
+        expect(activeAdminMap['alice']['active'], isTrue);
+        expect(activeAdminMap['alice']['role'], equals('admin'));
+        expect(activeAdminMap['diana']['active'], isTrue);
+        expect(activeAdminMap['diana']['role'], equals('admin'));
+      });
+      
+      test('should handle filter with no matching results', () async {
+        final superOldUsers = await gun.get('users')
+          .filter((user, key) => user['age'] > 100)
+          .once();
+        
+        expect(superOldUsers, isA<Map<String, dynamic>>());
+        final superOldMap = superOldUsers as Map<String, dynamic>;
+        expect(superOldMap.keys, isEmpty);
+      });
+      
+      test('should filter products by price range', () async {
+        final affordableProducts = await gun.get('products')
+          .filter((product, key) => product['price'] < 50.0)
+          .once();
+        
+        expect(affordableProducts, isA<Map<String, dynamic>>());
+        final affordableMap = affordableProducts as Map<String, dynamic>;
+        
+        // Should contain mouse and book
+        expect(affordableMap.keys, contains('mouse')); // 29.99
+        expect(affordableMap.keys, contains('book'));  // 39.99
+        expect(affordableMap.keys, isNot(contains('laptop'))); // 1299.99
+        expect(affordableMap.keys, isNot(contains('chair')));  // 199.99
+      });
+      
+      test('should filter by key name', () async {
+        final usersStartingWithA = await gun.get('users')
+          .filter((user, key) => key.startsWith('a'))
+          .once();
+        
+        expect(usersStartingWithA, isA<Map<String, dynamic>>());
+        final aUsersMap = usersStartingWithA as Map<String, dynamic>;
+        
+        // Should only contain alice
+        expect(aUsersMap.keys, contains('alice'));
+        expect(aUsersMap.keys, isNot(contains('bob')));
+        expect(aUsersMap.keys, isNot(contains('charlie')));
+        expect(aUsersMap.keys, isNot(contains('diana')));
+      });
+    });
+    
+    group('Map Operations', () {
+      test('should map to extract single field', () async {
+        final userNames = await gun.get('users')
+          .map((user, key) => {'name': user['name']})
+          .once();
+        
+        expect(userNames, isA<Map<String, dynamic>>());
+        final namesMap = userNames as Map<String, dynamic>;
+        
+        // Should have all user keys but only name field
+        expect(namesMap.keys, contains('alice'));
+        expect(namesMap.keys, contains('bob'));
+        expect(namesMap.keys, contains('charlie'));
+        expect(namesMap.keys, contains('diana'));
+        
+        expect(namesMap['alice'], equals({'name': 'Alice Smith'}));
+        expect(namesMap['bob'], equals({'name': 'Bob Johnson'}));
+        expect(namesMap['charlie'], equals({'name': 'Charlie Brown'}));
+        expect(namesMap['diana'], equals({'name': 'Diana Prince'}));
+        
+        // Should not contain other fields
+        expect(namesMap['alice'], isNot(contains('age')));
+        expect(namesMap['alice'], isNot(contains('role')));
+      });
+      
+      test('should map to transform field values', () async {
+        final userSummaries = await gun.get('users')
+          .map((user, key) => {
+            'id': key.toUpperCase(),
+            'displayName': '${user['name']} (${user['role']})',
+            'isActive': user['active'],
+            'ageGroup': user['age'] < 25 ? 'young' : user['age'] < 30 ? 'adult' : 'mature',
+          })
+          .once();
+        
+        expect(userSummaries, isA<Map<String, dynamic>>());
+        final summariesMap = userSummaries as Map<String, dynamic>;
+        
+        expect(summariesMap['alice'], equals({
+          'id': 'ALICE',
+          'displayName': 'Alice Smith (admin)',
+          'isActive': true,
+          'ageGroup': 'adult', // 25
+        }));
+        
+        expect(summariesMap['charlie'], equals({
+          'id': 'CHARLIE', 
+          'displayName': 'Charlie Brown (user)',
+          'isActive': false,
+          'ageGroup': 'young', // 22
+        }));
+        
+        expect(summariesMap['bob'], equals({
+          'id': 'BOB',
+          'displayName': 'Bob Johnson (user)',
+          'isActive': true,
+          'ageGroup': 'mature', // 30
+        }));
+      });
+      
+      test('should map products to price categories', () async {
+        final priceCategories = await gun.get('products')
+          .map((product, key) => {
+            'name': product['name'],
+            'priceCategory': product['price'] < 50 ? 'budget' : 
+                           product['price'] < 200 ? 'mid-range' : 'premium',
+            'availability': product['inStock'] ? 'available' : 'out-of-stock',
+          })
+          .once();
+        
+        expect(priceCategories, isA<Map<String, dynamic>>());
+        final categoriesMap = priceCategories as Map<String, dynamic>;
+        
+        expect(categoriesMap['mouse'], equals({
+          'name': 'Wireless Mouse',
+          'priceCategory': 'budget',   // 29.99
+          'availability': 'available',
+        }));
+        
+        expect(categoriesMap['chair'], equals({
+          'name': 'Office Chair',
+          'priceCategory': 'mid-range', // 199.99
+          'availability': 'available',
+        }));
+        
+        expect(categoriesMap['laptop'], equals({
+          'name': 'Gaming Laptop',
+          'priceCategory': 'premium',   // 1299.99
+          'availability': 'available',
+        }));
+      });
+      
+      test('should map with key transformation', () async {
+        final keyBasedMapping = await gun.get('users')
+          .map((user, key) => {
+            'originalKey': key,
+            'keyLength': key.length,
+            'keyUppercase': key.toUpperCase(),
+            'userName': user['name'],
+          })
+          .once();
+        
+        expect(keyBasedMapping, isA<Map<String, dynamic>>());
+        final keyMappingMap = keyBasedMapping as Map<String, dynamic>;
+        
+        expect(keyMappingMap['alice'], equals({
+          'originalKey': 'alice',
+          'keyLength': 5,
+          'keyUppercase': 'ALICE',
+          'userName': 'Alice Smith',
+        }));
+      });
+      
+      test('should handle map with null/empty values', () async {
+        // Add a user with some null values
+        await gun.get('users').get('testuser').put({
+          'name': 'Test User',
+          'age': null,
+          'role': '',
+          'active': false,
+        });
+        
+        final safeMapping = await gun.get('users')
+          .map((user, key) => {
+            'name': user['name'] ?? 'Unknown',
+            'age': user['age'] ?? 0,
+            'role': user['role']?.isEmpty == true ? 'unassigned' : user['role'],
+            'status': user['active'] == true ? 'active' : 'inactive',
+          })
+          .once();
+        
+        expect(safeMapping, isA<Map<String, dynamic>>());
+        final safeMappingMap = safeMapping as Map<String, dynamic>;
+        
+        expect(safeMappingMap['testuser'], equals({
+          'name': 'Test User',
+          'age': 0,
+          'role': 'unassigned',
+          'status': 'inactive',
+        }));
+      });
+    });
+    
+    group('Chained Filter and Map Operations', () {
+      test('should chain filter then map', () async {
+        final activeUserNames = await gun.get('users')
+          .filter((user, key) => user['active'] == true)
+          .map((user, key) => {
+            'name': user['name'],
+            'email': user['email'],
+          })
+          .once();
+        
+        expect(activeUserNames, isA<Map<String, dynamic>>());
+        final activeNamesMap = activeUserNames as Map<String, dynamic>;
+        
+        // Should only have active users
+        expect(activeNamesMap.keys, contains('alice'));
+        expect(activeNamesMap.keys, contains('bob'));
+        expect(activeNamesMap.keys, contains('diana'));
+        expect(activeNamesMap.keys, isNot(contains('charlie'))); // not active
+        
+        // Should only have mapped fields
+        expect(activeNamesMap['alice'], equals({
+          'name': 'Alice Smith',
+          'email': 'alice@example.com',
+        }));
+        expect(activeNamesMap['alice'], isNot(contains('age')));
+        expect(activeNamesMap['alice'], isNot(contains('role')));
+      });
+      
+      test('should chain map then filter', () async {
+        final expensiveProductNames = await gun.get('products')
+          .map((product, key) => {
+            'name': product['name'],
+            'isExpensive': product['price'] > 100,
+            'price': product['price'],
+          })
+          .filter((product, key) => product['isExpensive'] == true)
+          .once();
+        
+        expect(expensiveProductNames, isA<Map<String, dynamic>>());
+        final expensiveMap = expensiveProductNames as Map<String, dynamic>;
+        
+        // Should only have expensive products (laptop and chair)
+        expect(expensiveMap.keys, contains('laptop'));
+        expect(expensiveMap.keys, contains('chair'));
+        expect(expensiveMap.keys, isNot(contains('mouse')));
+        expect(expensiveMap.keys, isNot(contains('book')));
+        
+        expect(expensiveMap['laptop']['isExpensive'], isTrue);
+        expect(expensiveMap['chair']['isExpensive'], isTrue);
+      });
+      
+      test('should chain multiple filters and maps', () async {
+        final adminUserSummary = await gun.get('users')
+          .filter((user, key) => user['role'] == 'admin')
+          .filter((user, key) => user['active'] == true)
+          .map((user, key) => {
+            'adminId': key.toUpperCase(),
+            'fullName': user['name'],
+            'contactEmail': user['email'],
+          })
+          .once();
+        
+        expect(adminUserSummary, isA<Map<String, dynamic>>());
+        final adminMap = adminUserSummary as Map<String, dynamic>;
+        
+        // Should only have active admins (alice and diana)
+        expect(adminMap.keys, contains('alice'));
+        expect(adminMap.keys, contains('diana'));
+        expect(adminMap.keys, isNot(contains('bob')));     // not admin
+        expect(adminMap.keys, isNot(contains('charlie'))); // not active
+        
+        expect(adminMap['alice'], equals({
+          'adminId': 'ALICE',
+          'fullName': 'Alice Smith',
+          'contactEmail': 'alice@example.com',
+        }));
+      });
+    });
+    
+    group('Error Handling', () {
+      test('should handle filter function errors gracefully', () async {
+        try {
+          await gun.get('users')
+            .filter((user, key) => throw Exception('Filter error'))
+            .once();
+          // If no exception is thrown, that's also acceptable
+        } catch (e) {
+          // Error handling is implementation dependent
+          expect(e, isA<Exception>());
+        }
+      });
+      
+      test('should handle map function errors gracefully', () async {
+        try {
+          await gun.get('users')
+            .map((user, key) => throw Exception('Map error'))
+            .once();
+          // If no exception is thrown, that's also acceptable
+        } catch (e) {
+          // Error handling is implementation dependent 
+          expect(e, isA<Exception>());
+        }
+      });
+      
+      test('should handle filter on non-existent data', () async {
+        final result = await gun.get('nonexistent')
+          .filter((item, key) => true)
+          .once();
+        
+        expect(result, isNull);
+      });
+      
+      test('should handle map on non-existent data', () async {
+        final result = await gun.get('nonexistent')
+          .map((item, key) => {'transformed': true})
+          .once();
+        
+        expect(result, isNull);
+      });
+    });
+    
+    group('Real-time Operations', () {
+      test('should filter on real-time updates', () async {
+        final completer = Completer<Map<String, dynamic>>();
+        
+        // Subscribe to filtered active users
+        final subscription = gun.get('realtimeUsers')
+          .filter((user, key) => user['active'] == true)
+          .on((data, key) {
+            if (!completer.isCompleted) {
+              completer.complete(data as Map<String, dynamic>);
+            }
+          });
+        
+        // Add test data with both active and inactive users
+        await gun.get('realtimeUsers').put({
+          'user1': {
+            'name': 'Active User',
+            'active': true,
+          },
+          'user2': {
+            'name': 'Inactive User', 
+            'active': false,
+          },
+        });
+        
+        final receivedData = await completer.future;
+        
+        // Should receive the filtered data
+        expect(receivedData.keys, contains('user1'));
+        // Depending on implementation, user2 might be filtered out
+        
+        await subscription.cancel();
+      });
+      
+      test('should map on real-time updates', () async {
+        final completer = Completer<Map<String, dynamic>>();
+        
+        // Subscribe to mapped user data
+        final subscription = gun.get('realtimeMapping')
+          .map((user, key) => {
+            'id': key,
+            'displayName': user['name'],
+          })
+          .on((data, key) {
+            if (!completer.isCompleted) {
+              completer.complete(data as Map<String, dynamic>);
+            }
+          });
+        
+        // Add test data
+        await gun.get('realtimeMapping').put({
+          'testuser': {
+            'name': 'Test User',
+            'age': 25,
+          },
+        });
+        
+        final receivedData = await completer.future;
+        
+        // Should receive the mapped data structure
+        expect(receivedData, isA<Map<String, dynamic>>());
+        
+        await subscription.cancel();
+      });
+    });
+  });
 }

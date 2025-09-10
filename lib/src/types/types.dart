@@ -132,9 +132,6 @@ class GunNode {
 /// Callback function type for Gun operations
 typedef GunCallback<T> = void Function(T? result, String? error);
 
-/// Function type for Gun event listeners
-typedef GunListener<T> = void Function(T data, String key);
-
 /// Represents a link to another node in the Gun graph
 class GunLink {
   /// The key/reference to the linked node

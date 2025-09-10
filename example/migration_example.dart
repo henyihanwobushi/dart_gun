@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
 import '../lib/gun_dart.dart';
-import '../lib/src/utils/gunjs_migration.dart';
 
 /// Gun.js migration utilities example
 /// 

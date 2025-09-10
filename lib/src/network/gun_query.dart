@@ -53,11 +53,19 @@ class GunQuery {
   /// Timestamp when query was created
   final DateTime timestamp;
   
+  /// Optional filter function for result filtering
+  final Function? filterFn;
+  
+  /// Optional map function for result transformation
+  final Function? mapFn;
+  
   GunQuery({
     required this.nodeId,
     this.path = const [],
     String? queryId,
     this.callback,
+    this.filterFn,
+    this.mapFn,
   }) : queryId = queryId ?? Utils.randomString(8),
        timestamp = DateTime.now();
   
@@ -78,6 +86,30 @@ class GunQuery {
       path: path,
       queryId: queryId,
       callback: callback,
+    );
+  }
+  
+  /// Create a query with filter function
+  GunQuery filter(Function filterFunction) {
+    return GunQuery(
+      nodeId: nodeId,
+      path: path,
+      queryId: Utils.randomString(8), // New query ID for filtered query
+      callback: callback,
+      filterFn: filterFunction,
+      mapFn: mapFn,
+    );
+  }
+  
+  /// Create a query with map function
+  GunQuery map(Function mapFunction) {
+    return GunQuery(
+      nodeId: nodeId,
+      path: path,
+      queryId: Utils.randomString(8), // New query ID for mapped query
+      callback: callback,
+      filterFn: filterFn,
+      mapFn: mapFunction,
     );
   }
   
@@ -197,6 +229,8 @@ class GunQuery {
       path: [...path, segment],
       queryId: Utils.randomString(8), // New query ID for extended query
       callback: callback,
+      filterFn: filterFn,
+      mapFn: mapFn,
     );
   }
   
@@ -263,6 +297,77 @@ class GunQueryResult {
   
   /// Check if the query failed
   bool get isError => error != null;
+  
+  /// Apply filter function to the result data
+  GunQueryResult filter() {
+    if (!isSuccess || data == null || query.filterFn == null) {
+      return this;
+    }
+    
+    try {
+      final filteredData = <String, dynamic>{};
+      data!.forEach((key, value) {
+        // Apply filter function to each key-value pair
+        if (query.filterFn!(value, key)) {
+          filteredData[key] = value;
+        }
+      });
+      return GunQueryResult(
+        query: query,
+        data: filteredData,
+        peerId: peerId,
+      );
+    } catch (e) {
+      return GunQueryResult(
+        query: query,
+        error: 'Filter function error: $e',
+        peerId: peerId,
+      );
+    }
+  }
+  
+  /// Apply map function to the result data
+  GunQueryResult map() {
+    if (!isSuccess || data == null || query.mapFn == null) {
+      return this;
+    }
+    
+    try {
+      final mappedData = <String, dynamic>{};
+      data!.forEach((key, value) {
+        // Apply map function to each key-value pair
+        final mappedValue = query.mapFn!(value, key);
+        mappedData[key] = mappedValue;
+      });
+      return GunQueryResult(
+        query: query,
+        data: mappedData,
+        peerId: peerId,
+      );
+    } catch (e) {
+      return GunQueryResult(
+        query: query,
+        error: 'Map function error: $e',
+        peerId: peerId,
+      );
+    }
+  }
+  
+  /// Apply both filter and map functions if they exist
+  GunQueryResult applyEnhancements() {
+    var result = this;
+    
+    // Apply filter first, then map (if both exist)
+    if (query.filterFn != null) {
+      result = result.filter();
+    }
+    
+    if (query.mapFn != null) {
+      result = result.map();
+    }
+    
+    return result;
+  }
   
   @override
   String toString() {

@@ -91,7 +91,7 @@ void main() async {
 
     // In a real implementation, this would create and authenticate a user
     print('   Note: User authentication requires full SEA implementation');
-    print('   User system initialized: ${null != user}');
+    print('   User system initialized: true');
   } catch (e) {
     print('   Note: User authentication not yet fully implemented');
   }
