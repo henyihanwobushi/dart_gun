@@ -14,7 +14,10 @@ class MyTodoApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: TodoHomePage(),
+      home: GunProvider(
+        gun: Gun(),
+        child: TodoHomePage(),
+      ),
     );
   }
 }
@@ -26,171 +29,111 @@ class TodoHomePage extends StatefulWidget {
 
 class _TodoHomePageState extends State<TodoHomePage> {
   late Gun gun;
-  late TodoService todoService;
-  late AuthService authService;
   final TextEditingController _todoController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  
-  List<Todo> todos = [];
-  bool isAuthenticated = false;
-  String? currentUser;
+  List<TodoItem> todos = [];
+  int _nextId = 1;
 
   @override
-  void initState() {
-    super.initState();
-    
-    // Initialize Gun with memory storage (you can change to SqliteStorage for persistence)
-    gun = Gun(GunOptions(
-      storage: MemoryStorage(),
-      localStorage: true,
-      realtime: true,
-    ));
-    
-    authService = AuthService(gun);
-    todoService = TodoService(gun);
-    
-    // Listen for authentication changes
-    gun.user().events.listen((event) {
-      setState(() {
-        isAuthenticated = gun.user().isAuthenticated;
-        currentUser = gun.user().alias;
-      });
-      
-      if (isAuthenticated) {
-        _loadTodos();
-      }
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    gun = GunProvider.of(context);
+    _loadTodos();
+    _subscribeToTodos();
   }
 
-  void _loadTodos() {
-    if (!isAuthenticated) return;
-    
-    // Subscribe to real-time todo updates
-    todoService.onTodos((todoData) {
+  void _loadTodos() async {
+    // Load existing todos from Gun
+    final todosData = await gun.get('todos').once();
+    if (todosData != null && todosData is Map<String, dynamic>) {
+      final todosList = <TodoItem>[];
+      todosData.forEach((key, value) {
+        if (value != null && value is Map<String, dynamic>) {
+          todosList.add(TodoItem.fromMap(key, value));
+        }
+      });
       setState(() {
-        todos = todoData.entries
-            .map((entry) => Todo.fromMap(entry.key, entry.value))
-            .toList();
+        todos = todosList;
         todos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       });
-    });
-  }
-
-  Future<void> _signUp() async {
-    try {
-      await authService.signUp(_usernameController.text, _passwordController.text);
-      _usernameController.clear();
-      _passwordController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Account created successfully!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sign up failed: $e')),
-      );
     }
   }
-
-  Future<void> _signIn() async {
-    try {
-      await authService.signIn(_usernameController.text, _passwordController.text);
-      _usernameController.clear();
-      _passwordController.clear();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sign in failed: $e')),
-      );
-    }
-  }
-
-  Future<void> _signOut() async {
-    await authService.signOut();
-    setState(() {
-      todos.clear();
+  
+  void _subscribeToTodos() {
+    // Subscribe to real-time todo updates
+    gun.get('todos').on((data, key) {
+      if (mounted) {
+        _loadTodos();
+      }
     });
   }
 
   Future<void> _addTodo() async {
     if (_todoController.text.trim().isEmpty) return;
     
-    await todoService.addTodo(_todoController.text.trim());
+    final todoId = 'todo_${_nextId++}_${DateTime.now().millisecondsSinceEpoch}';
+    final newTodo = {
+      'id': todoId,
+      'title': _todoController.text.trim(),
+      'completed': false,
+      'createdAt': DateTime.now().millisecondsSinceEpoch,
+    };
+    
+    await gun.get('todos').get(todoId).put(newTodo);
     _todoController.clear();
+    
+    // Update local state immediately for better UX
+    setState(() {
+      todos.add(TodoItem.fromMap(todoId, newTodo));
+      todos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    });
   }
 
-  Future<void> _toggleTodo(Todo todo) async {
-    await todoService.toggleTodo(todo.id);
+  Future<void> _toggleTodo(TodoItem todo) async {
+    final updatedTodo = {
+      'id': todo.id,
+      'title': todo.title,
+      'completed': !todo.completed,
+      'createdAt': todo.createdAt,
+    };
+    
+    await gun.get('todos').get(todo.id).put(updatedTodo);
+    
+    // Update local state immediately
+    setState(() {
+      final index = todos.indexWhere((t) => t.id == todo.id);
+      if (index >= 0) {
+        todos[index] = TodoItem.fromMap(todo.id, updatedTodo);
+      }
+    });
   }
 
-  Future<void> _deleteTodo(Todo todo) async {
-    await todoService.deleteTodo(todo.id);
+  Future<void> _deleteTodo(TodoItem todo) async {
+    await gun.get('todos').get(todo.id).put(null);
+    
+    // Update local state immediately
+    setState(() {
+      todos.removeWhere((t) => t.id == todo.id);
+    });
   }
 
   @override
   void dispose() {
-    gun.close();
     _todoController.dispose();
-    _usernameController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!isAuthenticated) {
-      return Scaffold(
-        appBar: AppBar(title: Text('Gun Dart Todo - Sign In')),
-        body: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextField(
-                controller: _usernameController,
-                decoration: InputDecoration(
-                  labelText: 'Username',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: _signUp,
-                    child: Text('Sign Up'),
-                  ),
-                  ElevatedButton(
-                    onPressed: _signIn,
-                    child: Text('Sign In'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Gun Dart Todo'),
+        backgroundColor: Colors.blue[100],
         actions: [
-          TextButton(
-            onPressed: _signOut,
-            child: Text(
-              'Sign Out ($currentUser)',
-              style: TextStyle(color: Colors.white),
-            ),
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadTodos,
+            tooltip: 'Refresh todos',
           ),
         ],
       ),
@@ -270,100 +213,26 @@ class _TodoHomePageState extends State<TodoHomePage> {
   }
 }
 
-// Service classes
-class AuthService {
-  final Gun gun;
-  
-  AuthService(this.gun);
-
-  Future<UserAccount> signUp(String username, String password) async {
-    return await gun.user().create(username, password);
-  }
-
-  Future<UserAccount> signIn(String username, String password) async {
-    return await gun.user().auth(username, password);
-  }
-
-  Future<void> signOut() async {
-    await gun.user().leave();
-  }
-
-  bool get isAuthenticated => gun.user().isAuthenticated;
-  String? get currentUser => gun.user().alias;
-}
-
-class TodoService {
-  final Gun gun;
-  
-  TodoService(this.gun);
-
-  Future<void> addTodo(String title) async {
-    if (!gun.user().isAuthenticated) {
-      throw Exception('User not authenticated');
-    }
-    
-    final todoId = Utils.randomString(16);
-    await gun.user().storage.get('todos').get(todoId).put({
-      'id': todoId,
-      'title': title,
-      'completed': false,
-      'createdAt': DateTime.now().millisecondsSinceEpoch,
-    });
-  }
-
-  Future<void> toggleTodo(String todoId) async {
-    if (!gun.user().isAuthenticated) return;
-    
-    final todo = await gun.user().storage.get('todos').get(todoId).once();
-    if (todo != null) {
-      final completed = !(todo['completed'] as bool? ?? false);
-      await gun.user().storage.get('todos').get(todoId).put({
-        ...todo,
-        'completed': completed,
-      });
-    }
-  }
-
-  Future<void> deleteTodo(String todoId) async {
-    if (!gun.user().isAuthenticated) return;
-    
-    await gun.user().storage.get('todos').get(todoId).put(null);
-  }
-
-  void onTodos(Function(Map<String, dynamic>) callback) {
-    if (!gun.user().isAuthenticated) return;
-    
-    gun.user().storage.get('todos').on((data, key) {
-      if (data != null && data is Map<String, dynamic>) {
-        // Filter out null entries (deleted todos)
-        final filteredData = Map<String, dynamic>.from(data);
-        filteredData.removeWhere((key, value) => value == null);
-        callback(filteredData);
-      }
-    });
-  }
-}
-
-// Data model
-class Todo {
+// Simplified Todo item model
+class TodoItem {
   final String id;
   final String title;
   final bool completed;
   final int createdAt;
 
-  Todo({
+  TodoItem({
     required this.id,
     required this.title,
     required this.completed,
     required this.createdAt,
   });
 
-  factory Todo.fromMap(String id, Map<String, dynamic> map) {
-    return Todo(
+  factory TodoItem.fromMap(String id, Map<String, dynamic> map) {
+    return TodoItem(
       id: id,
-      title: map['title'] as String,
+      title: map['title'] as String? ?? '',
       completed: map['completed'] as bool? ?? false,
-      createdAt: map['createdAt'] as int,
+      createdAt: map['createdAt'] as int? ?? DateTime.now().millisecondsSinceEpoch,
     );
   }
 

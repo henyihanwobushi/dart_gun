@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../lib/src/gun.dart';
-import '../lib/src/flutter/gun_provider.dart';
-import '../lib/src/flutter/gun_builder.dart';
+import 'package:gun_dart/gun_dart.dart';
 
 void main() {
   runApp(MyApp());
@@ -16,188 +14,185 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: GunApp(
-        onGunCreated: (gun) {
-          print('Gun instance created and ready!');
-          _seedData(gun);
-        },
+      home: GunProvider(
+        gun: Gun(), // Create Gun instance
         child: MyHomePage(),
       ),
     );
   }
-
-  /// Seed some initial data for the example
-  void _seedData(Gun gun) async {
-    await gun.get('messages').get('msg1').put({
-      'text': 'Hello from Gun Dart!',
-      'author': 'Flutter User',
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    });
-    
-    await gun.get('messages').get('msg2').put({
-      'text': 'Real-time updates work great!',
-      'author': 'Another User',
-      'timestamp': DateTime.now().millisecondsSinceEpoch + 1000,
-    });
-    
-    await gun.get('counter').put({'value': 0});
-  }
 }
 
-class MyHomePage extends StatelessWidget {
+class MyHomePage extends StatefulWidget {
+  @override
+  _MyHomePageState createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0;
+  late Gun _gun;
+  final TextEditingController _messageController = TextEditingController();
+  List<Map<String, dynamic>> _messages = [];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _gun = GunProvider.of(context);
+    _initializeData();
+    _subscribeToUpdates();
+  }
+
+  void _initializeData() async {
+    // Seed initial data
+    await _gun.get('counter').put({'value': 0});
+    await _gun.get('messages').get('msg1').put({
+      'text': 'Welcome to Gun Dart Flutter!',
+      'author': 'System',
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  void _subscribeToUpdates() {
+    // Subscribe to counter updates
+    _gun.get('counter').on((data, key) {
+      if (mounted && data != null) {
+        setState(() {
+          _counter = data['value'] ?? 0;
+        });
+      }
+    });
+
+    // Subscribe to message updates (simplified)
+    _gun.get('messages').on((data, key) {
+      if (mounted && data != null) {
+        print('Message update: $data');
+        // In a real app, you'd handle message updates here
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Gun Dart Flutter Demo'),
-        backgroundColor: Colors.blue[100],
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(kToolbarHeight),
+        child: _buildAppBar(),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Real-time counter example
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Real-time Counter',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text('Current value: '),
-                        GunBuilder<int>(
-                          chain: context.gun.get('counter'),
-                          transform: (data) => (data as Map?)?['value'] ?? 0,
-                          builder: (context, value, isLoading) {
-                            if (isLoading) {
-                              return CircularProgressIndicator(
-                                strokeWidth: 2,
-                              );
-                            }
-                            return Text(
-                              value.toString(),
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-                    Row(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => _incrementCounter(context),
-                          child: Text('Increment'),
-                        ),
-                        SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () => _decrementCounter(context),
-                          child: Text('Decrement'),
-                        ),
-                      ],
-                    ),
-                  ],
+            _buildCounterCard(),
+            SizedBox(height: 16),
+            _buildMessagesCard(),
+            SizedBox(height: 16),
+            _buildDemoInfoCard(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return AppBar(
+      title: Text('Gun Dart Flutter Demo'),
+      backgroundColor: Colors.blue[100],
+    );
+  }
+
+  Widget _buildCounterCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Real-time Counter',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Text('Current value: '),
+                Text(
+                  _counter.toString(),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
                 ),
-              ),
+              ],
             ),
             SizedBox(height: 16),
-            
-            // Messages list example
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Real-time Messages',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    SizedBox(height: 16),
-                    
-                    // Message input
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Type a message...',
-                              border: OutlineInputBorder(),
-                            ),
-                            onSubmitted: (text) => _sendMessage(context, text),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        IconButton(
-                          onPressed: () {
-                            // In a real app, you'd get the text from the controller
-                            _sendMessage(context, 'New message from Flutter!');
-                          },
-                          icon: Icon(Icons.send),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-                    
-                    // Messages display using GunText
-                    Container(
-                      height: 200,
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            MessageWidget(messageKey: 'msg1'),
-                            MessageWidget(messageKey: 'msg2'),
-                            MessageWidget(messageKey: 'msg3'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: _incrementCounter,
+                  child: Text('Increment'),
                 ),
-              ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _decrementCounter,
+                  child: Text('Decrement'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessagesCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Real-time Messages',
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
             SizedBox(height: 16),
-            
-            // User status example
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'User Status',
-                      style: Theme.of(context).textTheme.headlineSmall,
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: 'Type a message...',
+                      border: OutlineInputBorder(),
                     ),
-                    SizedBox(height: 8),
-                    GunText(
-                      chain: context.gun.get('user').get('status'),
-                      loadingText: 'Loading status...',
-                      emptyText: 'No status set',
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => _updateStatus(context),
-                      child: Text('Update Status'),
-                    ),
-                  ],
+                    onSubmitted: (text) => _sendMessage(text),
+                  ),
                 ),
+                SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _sendMessage(_messageController.text),
+                  icon: Icon(Icons.send),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ListView.builder(
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  return ListTile(
+                    title: Text(message['text'] ?? ''),
+                    subtitle: Text('by ${message['author'] ?? 'Unknown'}'),
+                    dense: true,
+                  );
+                },
               ),
             ),
           ],
@@ -206,99 +201,80 @@ class MyHomePage extends StatelessWidget {
     );
   }
 
-  void _incrementCounter(BuildContext context) async {
-    final current = await context.gun.get('counter').once() as Map?;
-    final value = (current?['value'] ?? 0) as int;
-    await context.gun.get('counter').put({'value': value + 1});
+  Widget _buildDemoInfoCard() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Gun Dart Flutter Demo',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'This demo shows basic Gun Dart integration with Flutter. '
+              'The counter updates in real-time and messages are stored '
+              'in the Gun database.',
+              style: TextStyle(
+                color: Colors.grey[600],
+              ),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _resetDemo,
+              child: Text('Reset Demo'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  void _decrementCounter(BuildContext context) async {
-    final current = await context.gun.get('counter').once() as Map?;
-    final value = (current?['value'] ?? 0) as int;
-    await context.gun.get('counter').put({'value': value - 1});
+  void _incrementCounter() async {
+    final newValue = _counter + 1;
+    await _gun.get('counter').put({'value': newValue});
   }
 
-  void _sendMessage(BuildContext context, String text) async {
+  void _decrementCounter() async {
+    final newValue = _counter - 1;
+    await _gun.get('counter').put({'value': newValue});
+  }
+
+  void _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
-    
+
     final messageId = 'msg${DateTime.now().millisecondsSinceEpoch}';
-    await context.gun.get('messages').get(messageId).put({
+    await _gun.get('messages').get(messageId).put({
       'text': text.trim(),
       'author': 'Flutter User',
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     });
+
+    // Add to local messages list for immediate UI update
+    setState(() {
+      _messages.add({
+        'text': text.trim(),
+        'author': 'Flutter User',
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+    });
+
+    _messageController.clear();
   }
 
-  void _updateStatus(BuildContext context) async {
-    final statuses = [
-      'Available',
-      'Busy',
-      'In a meeting',
-      'Working from home',
-      'On vacation',
-    ];
-    final status = statuses[DateTime.now().millisecond % statuses.length];
-    await context.gun.get('user').get('status').put(status);
+  void _resetDemo() async {
+    await _gun.get('counter').put({'value': 0});
+    setState(() {
+      _counter = 0;
+      _messages.clear();
+    });
   }
-}
-
-class MessageWidget extends StatelessWidget {
-  final String messageKey;
-
-  const MessageWidget({Key? key, required this.messageKey}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return GunBuilder<Map<String, dynamic>>(
-      chain: context.gun.get('messages').get(messageKey),
-      builder: (context, message, isLoading) {
-        if (isLoading) {
-          return Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: Text('Loading message...', style: TextStyle(color: Colors.grey)),
-          );
-        }
-        
-        if (message == null) {
-          return SizedBox.shrink();
-        }
-        
-        final text = message['text'] ?? '';
-        final author = message['author'] ?? 'Unknown';
-        final timestamp = message['timestamp'] ?? 0;
-        final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
-        
-        return Container(
-          margin: EdgeInsets.symmetric(vertical: 4),
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                text,
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 4),
-              Text(
-                '$author • ${_formatTime(date)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  String _formatTime(DateTime date) {
-    return '${date.hour.toString().padLeft(2, '0')}:'
-           '${date.minute.toString().padLeft(2, '0')}';
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
   }
 }

@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import '../../lib/gun_dart.dart';
 
+// 增加全局超时系数，便于在不同环境中调整等待时间
+const double timeoutMultiplier = 1.5; // 增加1.5倍的等待时间
+
 /// Comprehensive Gun.js interoperability tests
 /// 
 /// These tests validate that gun_dart can successfully communicate and 
@@ -100,7 +103,7 @@ void main() {
         await gun.get('interop/from_dart').put(testData);
         
         // Wait for sync - Gun.js needs time to process WebSocket data
-        await Future.delayed(const Duration(seconds: 5));
+        await Future.delayed(Duration(seconds: (5 * timeoutMultiplier).toInt()));
         
         // Verify data appears in Gun.js via HTTP API
         final response = await _queryGunJS('interop/from_dart');
@@ -118,7 +121,7 @@ void main() {
         });
         
         // Wait for WebSocket sync from Gun.js to gun_dart
-        await Future.delayed(const Duration(seconds: 3));
+        await Future.delayed(Duration(seconds: (3 * timeoutMultiplier).toInt()));
         
         // Read data from gun_dart
         final result = await gun.get('interop/from_gunjs').once();
@@ -132,7 +135,7 @@ void main() {
         
         // First: gun_dart writes a field
         await gun.get(nodeKey).put({'dart_field': 'from_dart'});
-        await Future.delayed(const Duration(milliseconds: 500)); // Allow sync to Gun.js
+        await Future.delayed(Duration(milliseconds: (500 * timeoutMultiplier).toInt())); // Allow sync to Gun.js
         
         // Verify Gun.js received the dart_field
         final jsResultAfterDart = await _queryGunJS(nodeKey);
@@ -149,7 +152,7 @@ void main() {
         });
         
         // Wait for Gun.js to process and potentially broadcast
-        await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(Duration(seconds: (2 * timeoutMultiplier).toInt()));
         
         // Third: gun_dart queries for the js-only data to test GET response handling
         final dartResultFromJS = await gun.get(jsOnlyKey).once();
@@ -191,7 +194,7 @@ void main() {
         });
         
         // Wait for conflict resolution and broadcast sync
-        await Future.delayed(const Duration(seconds: 8));
+        await Future.delayed(Duration(seconds: (8 * timeoutMultiplier).toInt()));
         
         // Both should converge to newer value
         final dartResult = await gun.get(nodeKey).once();
@@ -232,7 +235,7 @@ void main() {
         });
         
         // Wait for resolution and broadcast sync
-        await Future.delayed(const Duration(seconds: 5));
+        await Future.delayed(Duration(seconds: (5 * timeoutMultiplier).toInt()));
         
         // Check field-level resolution
         final dartResult = await gun.get(nodeKey).once();
@@ -333,7 +336,7 @@ void main() {
         
         // Wait for real-time update
         final receivedData = await completer.future.timeout(
-          const Duration(seconds: 5),
+          const Duration(seconds: 10),
           onTimeout: () => throw TimeoutException('No real-time update received'),
         );
         
@@ -345,10 +348,14 @@ void main() {
       test('should handle DAM errors from Gun.js', () async {
         if (shouldSkipGunJSTest(gunJSAvailable)) return;
         final errors = <GunError>[];
+        final errorCompleter = Completer<List<GunError>>();
         
         // Subscribe to errors
-        gun.errors.listen((error) {
+        final subscription = gun.errors.listen((error) {
           errors.add(error);
+          if (errors.length >= 1) {
+            errorCompleter.complete(errors);
+          }
         });
         
         // Trigger an error condition
@@ -359,7 +366,13 @@ void main() {
         }
         
         // Wait for potential DAM messages
-        await Future.delayed(const Duration(seconds: 2));
+        try {
+          await errorCompleter.future.timeout(const Duration(seconds: 5));
+        } catch (e) {
+          // Ignore timeout
+        } finally {
+          await subscription.cancel();
+        }
         
         // Should handle gracefully (may or may not generate errors depending on Gun.js setup)
         // The test is that we don't crash
@@ -697,9 +710,11 @@ process.on('SIGINT', () => {
 
 /// Query Gun.js via HTTP with enhanced error handling
 Future<Map<String, dynamic>> _queryGunJS(String key) async {
+  HttpClient? client;
   try {
     print('Querying Gun.js HTTP API for key: $key');
-    final client = HttpClient();
+    client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 5);
     final request = await client.get('localhost', 8765, '/gun/$key');
     final response = await request.close();
     
@@ -721,27 +736,34 @@ Future<Map<String, dynamic>> _queryGunJS(String key) async {
   } catch (e) {
     print('Failed to query Gun.js HTTP API: $e');
     return {};
+  } finally {
+    client?.close();
   }
 }
 
 /// Send data to Gun.js via WebSocket (more realistic than HTTP)
 Future<void> _putToGunJSViaWebSocket(String key, Map<String, dynamic> data) async {
-  // Create a direct WebSocket connection to Gun.js and send PUT message
-  final gunPeer = WebSocketPeer('ws://localhost:8765/gun');
-  await gunPeer.connect();
-  await Future.delayed(const Duration(milliseconds: 500)); // Allow connection to stabilize
-  
-  // Send PUT message using Gun.js wire protocol
-  await gunPeer.put(key, data);
-  await Future.delayed(const Duration(milliseconds: 200)); // Allow message to be processed
-  
-  await gunPeer.close();
+  WebSocketPeer? gunPeer;
+  try {
+    // Create a direct WebSocket connection to Gun.js and send PUT message
+    gunPeer = WebSocketPeer('ws://localhost:8765/gun');
+    await gunPeer.connect();
+    await Future.delayed(const Duration(milliseconds: 500)); // Allow connection to stabilize
+    
+    // Send PUT message using Gun.js wire protocol
+    await gunPeer.put(key, data);
+    await Future.delayed(const Duration(milliseconds: 200)); // Allow message to be processed
+  } finally {
+    await gunPeer?.close();
+  }
 }
 
 /// Send data to Gun.js via HTTP PUT
 Future<void> _putToGunJS(String key, Map<String, dynamic> data) async {
+  HttpClient? client;
   try {
-    final client = HttpClient();
+    client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 5);
     final request = await client.put('localhost', 8765, '/gun/$key');
     request.headers.set('Content-Type', 'application/json');
     request.write(jsonEncode(data));
@@ -749,5 +771,7 @@ Future<void> _putToGunJS(String key, Map<String, dynamic> data) async {
     await response.drain();
   } catch (e) {
     print('Failed to put to Gun.js: $e');
+  } finally {
+    client?.close();
   }
 }
