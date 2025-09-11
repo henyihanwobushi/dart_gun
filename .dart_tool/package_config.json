@@ -494,6 +494,12 @@
       "languageVersion": "3.8"
     },
     {
+      "name": "sqflite_common_ffi",
+      "rootUri": "file:///Users/work/.pub-cache/hosted/pub.flutter-io.cn/sqflite_common_ffi-2.3.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
       "name": "sqflite_darwin",
       "rootUri": "file:///Users/work/.pub-cache/hosted/pub.flutter-io.cn/sqflite_darwin-2.4.2",
       "packageUri": "lib/",
@@ -504,6 +510,12 @@
       "rootUri": "file:///Users/work/.pub-cache/hosted/pub.flutter-io.cn/sqflite_platform_interface-2.4.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
+    },
+    {
+      "name": "sqlite3",
+      "rootUri": "file:///Users/work/.pub-cache/hosted/pub.flutter-io.cn/sqlite3-2.4.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "stack_trace",

@@ -16,6 +16,7 @@
         "pointycastle",
         "shared_preferences",
         "sqflite",
+        "sqflite_common_ffi",
         "uuid",
         "web_socket_channel"
       ],
@@ -131,6 +132,17 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "sqflite_common_ffi",
+      "version": "2.3.5",
+      "dependencies": [
+        "meta",
+        "path",
+        "sqflite_common",
+        "sqlite3",
+        "synchronized"
       ]
     },
     {
@@ -682,8 +694,8 @@
       ]
     },
     {
-      "name": "web",
-      "version": "0.5.1",
+      "name": "synchronized",
+      "version": "3.4.0",
       "dependencies": []
     },
     {
@@ -694,6 +706,22 @@
         "path",
         "synchronized"
       ]
+    },
+    {
+      "name": "sqlite3",
+      "version": "2.4.5",
+      "dependencies": [
+        "collection",
+        "ffi",
+        "meta",
+        "path",
+        "web"
+      ]
+    },
+    {
+      "name": "web",
+      "version": "0.5.1",
+      "dependencies": []
     },
     {
       "name": "sqflite_platform_interface",
@@ -958,8 +986,8 @@
       ]
     },
     {
-      "name": "synchronized",
-      "version": "3.4.0",
+      "name": "ffi",
+      "version": "2.1.4",
       "dependencies": []
     },
     {
@@ -1010,11 +1038,6 @@
         "path_provider_platform_interface",
         "xdg_directories"
       ]
-    },
-    {
-      "name": "ffi",
-      "version": "2.1.4",
-      "dependencies": []
     },
     {
       "name": "xdg_directories",

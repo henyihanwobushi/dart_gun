@@ -29,6 +29,7 @@ dependencies:
   
   # Real-time capabilities
   web_socket_channel: ^2.4.0  # WebSocket support for real-time sync
+  sqflite_common_ffi: ^2.3.5
 
 dev_dependencies:
   flutter_test:
@@ -38,15 +39,8 @@ dev_dependencies:
   mockito: ^5.4.2
   build_runner: ^2.4.7
 
-# Flutter configuration
-flutter:
-  # No assets or plugins initially
-
 # Additional package metadata
 topics:
-  - database
-  - realtime
-  - p2p
   - decentralized
   - offline-first
   - graph
