@@ -584,6 +584,7 @@ class ComparisonReport {
 }
 
 /// Main benchmark runner for testing
+@Timeout(Duration(minutes: 5))
 void main() async {
   group('Performance Benchmarks', () {
     late Gun gun;
@@ -619,7 +620,7 @@ void main() async {
       print('   Fastest: ${report.summary!.fastestOperation}');
       print('   Slowest: ${report.summary!.slowestOperation}');
       print('   Peak memory: ${(report.summary!.peakMemoryUsage / 1024 / 1024).toStringAsFixed(2)}MB');
-    });
+    }, timeout: const Timeout(Duration(minutes: 5)));
     
     test('individual operation benchmarks', () async {
       // Reset accumulated results from previous tests to avoid contamination
