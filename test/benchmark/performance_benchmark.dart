@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/gun_dart.dart';
+import '../../lib/dart_gun.dart';
 
-/// Comprehensive performance benchmarking for gun_dart vs Gun.js
+/// Comprehensive performance benchmarking for dart_gun vs Gun.js
 /// 
 /// Measures and compares performance across various operations including
 /// data writes, reads, conflict resolution, network sync, and memory usage.
@@ -471,7 +471,7 @@ class PerformanceBenchmark {
     BenchmarkReport dartReport,
     Map<String, dynamic> gunJSResults,
   ) async {
-    // This would compare gun_dart results with Gun.js benchmark results
+    // This would compare dart_gun results with Gun.js benchmark results
     // For now, return a placeholder comparison
     return ComparisonReport(
       dartReport: dartReport,
@@ -557,7 +557,7 @@ class BenchmarkSummary {
   };
 }
 
-/// Comparison report between gun_dart and Gun.js
+/// Comparison report between dart_gun and Gun.js
 class ComparisonReport {
   final BenchmarkReport dartReport;
   final Map<String, dynamic> gunJSResults;
@@ -609,7 +609,7 @@ void main() async {
       expect(report.totalDuration.inMilliseconds, greaterThan(0));
       
       // Save report
-      await report.saveToFile('/tmp/gun_dart_benchmark_report.json');
+      await report.saveToFile('/tmp/dart_gun_benchmark_report.json');
       
       print('\n📊 Benchmark Summary:');
       print('   Total operations: ${report.summary!.totalOperations}');

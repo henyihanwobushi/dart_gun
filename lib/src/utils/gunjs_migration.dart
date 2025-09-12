@@ -5,13 +5,13 @@ import '../data/metadata_manager.dart';
 
 /// Gun.js data migration utilities
 /// 
-/// Provides seamless data import/export between Gun.js and gun_dart systems,
+/// Provides seamless data import/export between Gun.js and dart_gun systems,
 /// ensuring complete format compatibility and data integrity.
 class GunJSMigration {
   
   /// Import data from Gun.js export format
   /// 
-  /// Reads Gun.js export JSON and imports it into gun_dart storage,
+  /// Reads Gun.js export JSON and imports it into dart_gun storage,
   /// preserving all metadata, HAM timestamps, and graph relationships.
   static Future<MigrationResult> importFromGunJS(
     Gun gun, 
@@ -51,7 +51,7 @@ class GunJSMigration {
         }
         
         try {
-          // Convert Gun.js node to gun_dart format
+          // Convert Gun.js node to dart_gun format
           final convertedNode = _convertGunJSNodeToDart(
             nodeId, 
             nodeData,
@@ -95,9 +95,9 @@ class GunJSMigration {
     return result;
   }
   
-  /// Export gun_dart data to Gun.js compatible format
+  /// Export dart_gun data to Gun.js compatible format
   /// 
-  /// Exports all or specified data from gun_dart to Gun.js JSON format,
+  /// Exports all or specified data from dart_gun to Gun.js JSON format,
   /// maintaining full compatibility with Gun.js import systems.
   static Future<MigrationResult> exportToGunJS(
     Gun gun,
@@ -168,27 +168,27 @@ class GunJSMigration {
     return result;
   }
   
-  /// Create a backup of current gun_dart data
+  /// Create a backup of current dart_gun data
   static Future<MigrationResult> createBackup(
     Gun gun,
     String backupPath, {
     String? description,
   }) async {
     final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-    final backupFile = '$backupPath/gun_dart_backup_$timestamp.json';
+    final backupFile = '$backupPath/dart_gun_backup_$timestamp.json';
     
     final result = await exportToGunJS(gun, backupFile);
     result.description = description ?? 'Automated backup';
     
     if (result.success) {
       // Create backup metadata file
-      final metadataFile = '$backupPath/gun_dart_backup_$timestamp.meta.json';
+      final metadataFile = '$backupPath/dart_gun_backup_$timestamp.meta.json';
       final metadata = {
         'created': DateTime.now().toIso8601String(),
         'description': result.description,
         'nodeCount': result.exportedCount,
         'backupFile': backupFile,
-        'version': '0.2.1', // gun_dart version
+        'version': '0.2.1', // dart_gun version
       };
       
       await File(metadataFile).writeAsString(
@@ -199,7 +199,7 @@ class GunJSMigration {
     return result;
   }
   
-  /// Restore from a gun_dart backup
+  /// Restore from a dart_gun backup
   static Future<MigrationResult> restoreFromBackup(
     Gun gun,
     String backupFilePath, {
@@ -229,7 +229,7 @@ class GunJSMigration {
     }
   }
   
-  /// Convert gun_dart data format to match Gun.js exactly
+  /// Convert dart_gun data format to match Gun.js exactly
   static Map<String, dynamic> convertDataFormat(
     Map<String, dynamic> dartData, {
     bool toGunJS = true,
@@ -241,7 +241,7 @@ class GunJSMigration {
     }
   }
   
-  /// Compare data between gun_dart and Gun.js format for differences
+  /// Compare data between dart_gun and Gun.js format for differences
   static DataComparison compareFormats(
     Map<String, dynamic> dartData,
     Map<String, dynamic> gunJSData,
@@ -385,13 +385,13 @@ class GunJSMigration {
   }
   
   static Map<String, dynamic> _convertDartFormatToGunJS(Map<String, dynamic> data) {
-    // Convert gun_dart specific format to Gun.js format
+    // Convert dart_gun specific format to Gun.js format
     // This handles any format differences between the systems
     return Map<String, dynamic>.from(data);
   }
   
   static Map<String, dynamic> _convertGunJSFormatToDart(Map<String, dynamic> data) {
-    // Convert Gun.js format to gun_dart format
+    // Convert Gun.js format to dart_gun format
     return Map<String, dynamic>.from(data);
   }
   

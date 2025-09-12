@@ -1,5 +1,5 @@
 // Advanced Gun Dart example demonstrating complex features
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 /// Advanced example showing complex Gun Dart features
 void main() async {
@@ -110,7 +110,7 @@ void main() async {
 
   await gun.get('posts').get('post2').put({
     'title': 'Real-time Database Magic',
-    'content': 'Gun.js and gun_dart provide real-time sync...',
+    'content': 'Gun.js and dart_gun provide real-time sync...',
     'author': 'bob',
     'timestamp': DateTime.now().millisecondsSinceEpoch,
   });

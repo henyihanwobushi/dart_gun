@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎆 **COMPLETE Gun.js Ecosystem Compatibility** (100% test success rate - ALL TESTS PASSING!)
   - Complete interoperability test suite with bi-directional Gun.js sync validation (basic sync fully working)
   - Gun.js compatible user space with complete authentication and data isolation
-  - Data migration utilities for seamless import/export between Gun.js and gun_dart
-  - Performance benchmarking system comparing gun_dart vs Gun.js operations
+  - Data migration utilities for seamless import/export between Gun.js and dart_gun
+  - Performance benchmarking system comparing dart_gun vs Gun.js operations
   - Protocol version support with version detection and backwards compatibility
   - Fixed critical GunChain path construction bug affecting user data isolation
   - Comprehensive documentation and migration guides for Gun.js developers
@@ -369,5 +369,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic folder structure for Dart package
 - Initial documentation and README
 
-[Unreleased]: https://github.com/yourusername/gun_dart/compare/v0.0.1...HEAD
-[0.0.1]: https://github.com/yourusername/gun_dart/releases/tag/v0.0.1
+[Unreleased]: https://github.com/yourusername/dart_gun/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/yourusername/dart_gun/releases/tag/v0.0.1

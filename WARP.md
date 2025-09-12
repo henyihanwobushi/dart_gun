@@ -2,7 +2,7 @@
 
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
-Project: gun_dart — a Dart/Flutter port of Gun.js (real-time, decentralized, offline-first graph data sync engine).
+Project: dart_gun — a Dart/Flutter port of Gun.js (real-time, decentralized, offline-first graph data sync engine).
 
 Commands
 - Prereqs
@@ -15,7 +15,7 @@ Commands
   - dart format .
 - Run tests (Flutter test runner is required because tests import flutter_test)
   - All tests: flutter test
-  - Single file: flutter test test/gun_dart_test.dart
+  - Single file: flutter test test/dart_gun_test.dart
   - Filter by test name: flutter test --plain-name "should create Gun instance"
   - Run with logs: flutter test -r expanded
 - Run example
@@ -25,7 +25,7 @@ Commands
 
 High-level architecture
 - Public API surface (library exports)
-  - lib/gun_dart.dart aggregates the public API and re-exports core, data, storage, network, auth, utils, and types modules. Consumers import package:gun_dart/gun_dart.dart
+  - lib/dart_gun.dart aggregates the public API and re-exports core, data, storage, network, auth, utils, and types modules. Consumers import package:dart_gun/dart_gun.dart
 - Core
   - Gun (lib/src/gun.dart)
     - Entry point and façade over storage and networking
@@ -73,7 +73,7 @@ High-level architecture
 Repository highlights
 - README.md captures project goals, WIP status, and basic usage mirroring Gun.js semantics
 - example/basic_example.dart shows minimal end-to-end usage with put/once and a placeholder on() subscription
-- test/gun_dart_test.dart exercises basic flows: instance creation, put/once on simple and nested paths, null for missing keys
+- test/dart_gun_test.dart exercises basic flows: instance creation, put/once on simple and nested paths, null for missing keys
 
 Development notes specific to this repo
 - ✅ Real-time subscriptions fully implemented with event streams
@@ -88,7 +88,7 @@ Development notes specific to this repo
 How to run a focused workflow
 - Test core functionality:
   1) Run all tests: flutter test
-  2) Run specific test suite: flutter test test/gun_dart_test.dart
+  2) Run specific test suite: flutter test test/dart_gun_test.dart
   3) Run CRDT tests: flutter test test/crdt_types_test.dart
   4) Run transport tests: flutter test test/transport_test.dart
   5) Run utility tests: flutter test test/utils_test.dart
@@ -102,11 +102,11 @@ How to run a focused workflow
   4) Update documentation as needed
 
 Key files
-- Public entry: lib/gun_dart.dart
+- Public entry: lib/dart_gun.dart
 - Core engine: lib/src/gun.dart, lib/src/gun_chain.dart
 - Storage SPI + impls: lib/src/storage/
 - Network SPI + impls: lib/src/network/
 - Types and protocol: lib/src/types/
 - Example: example/basic_example.dart
-- Tests: test/gun_dart_test.dart
+- Tests: test/dart_gun_test.dart
 

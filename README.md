@@ -57,7 +57,7 @@ Based on Gun.js architecture, this implementation will include:
 
 ```yaml
 dependencies:
-  gun_dart: ^0.2.0
+  dart_gun: ^0.2.0
 ```
 
 ## Usage
@@ -65,7 +65,7 @@ dependencies:
 ### Basic Example
 
 ```dart
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 void main() async {
   // Initialize Gun instance
@@ -90,7 +90,7 @@ void main() async {
 ### Advanced CRDT Data Types
 
 ```dart
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 void main() async {
   // Distributed counters
@@ -117,7 +117,7 @@ void main() async {
 ### Network Transport Protocols
 
 ```dart
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 void main() async {
   // HTTP transport for server communication
@@ -138,7 +138,7 @@ void main() async {
 ### User Authentication & Encryption
 
 ```dart
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 void main() async {
   final gun = Gun();
@@ -164,7 +164,7 @@ void main() async {
 
 ## Gun.js Compatibility Status
 
-**🎉 ACHIEVEMENT COMPLETE**: gun_dart has achieved **COMPLETE Gun.js ecosystem compatibility** with **100% test coverage** (347/347 tests passing)!
+**🎉 ACHIEVEMENT COMPLETE**: dart_gun has achieved **COMPLETE Gun.js ecosystem compatibility** with **100% test coverage** (347/347 tests passing)!
 
 ### 🔥 **What Works Today - EVERYTHING!**
 - ✅ Complete Gun.js API surface (`.get()`, `.put()`, `.on()`, `.once()`)
@@ -180,7 +180,7 @@ void main() async {
 - ✅ **PRODUCTION-READY for Gun.js ecosystem integration**
 
 ### 🎆 **Complete Gun.js Ecosystem Integration - NO ISSUES REMAINING**
-gun_dart now provides seamless interoperability with the Gun.js ecosystem:
+dart_gun now provides seamless interoperability with the Gun.js ecosystem:
 
 - **[Gun.js Compatibility Analysis](doc/GUNJS_COMPATIBILITY.md)** - COMPLETE compatibility achieved
 - **[Gun.js Compatibility TODO](doc/GUNJS_COMPATIBILITY_TODO.md)** - ALL tasks completed with 100% test success

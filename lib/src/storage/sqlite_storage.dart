@@ -15,7 +15,7 @@ class SQLiteStorage implements StorageAdapter {
   bool _initialized = false;
 
   /// Create SQLite storage with custom database name
-  SQLiteStorage([this._dbName = 'gun_dart.db']);
+  SQLiteStorage([this._dbName = 'dart_gun.db']);
 
   @override
   Future<void> initialize() async {

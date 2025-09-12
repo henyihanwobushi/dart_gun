@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gun_dart/src/utils/encoder.dart';
-import 'package:gun_dart/src/utils/validator.dart';
+import 'package:dart_gun/src/utils/encoder.dart';
+import 'package:dart_gun/src/utils/validator.dart';
 
 void main() {
   group('Encoder Tests', () {

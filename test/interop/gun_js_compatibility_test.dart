@@ -2,14 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/gun_dart.dart';
+import '../../lib/dart_gun.dart';
 
 // 增加全局超时系数，便于在不同环境中调整等待时间
 const double timeoutMultiplier = 1.5; // 增加1.5倍的等待时间
 
 /// Comprehensive Gun.js interoperability tests
 /// 
-/// These tests validate that gun_dart can successfully communicate and 
+/// These tests validate that dart_gun can successfully communicate and 
 /// synchronize data with actual Gun.js instances, ensuring complete compatibility.
 /// 
 /// Prerequisites:
@@ -70,7 +70,7 @@ void main() {
         gunServer = await _startGunJSServer();
         await Future.delayed(const Duration(seconds: 2)); // Allow server to start
         
-        // Create gun_dart instance configured for Gun.js compatibility
+        // Create dart_gun instance configured for Gun.js compatibility
         gun = Gun(GunOptions(
           peers: [WebSocketPeer('ws://localhost:8765/gun')],
           storage: MemoryStorage(), // Use memory storage for tests
@@ -92,10 +92,10 @@ void main() {
     });
     
     group('Basic Data Synchronization', () {
-      gunJSTest('should sync data from gun_dart to Gun.js', () async {
-        // Put data in gun_dart
+      gunJSTest('should sync data from dart_gun to Gun.js', () async {
+        // Put data in dart_gun
         final testData = {
-          'message': 'Hello from gun_dart',
+          'message': 'Hello from dart_gun',
           'timestamp': DateTime.now().millisecondsSinceEpoch,
           'source': 'flutter_test',
         };
@@ -108,11 +108,11 @@ void main() {
         // Verify data appears in Gun.js via HTTP API
         final response = await _queryGunJS('interop/from_dart');
         expect(response, isNotNull);
-        expect(response['message'], equals('Hello from gun_dart'));
+        expect(response['message'], equals('Hello from dart_gun'));
         expect(response['source'], equals('flutter_test'));
       }, () => gunJSAvailable);
       
-      gunJSTest('should sync data from Gun.js to gun_dart', () async {
+      gunJSTest('should sync data from Gun.js to dart_gun', () async {
         // Put data in Gun.js
         await _putToGunJS('interop/from_gunjs', {
           'message': 'Hello from Gun.js',
@@ -120,10 +120,10 @@ void main() {
           'source': 'node_test',
         });
         
-        // Wait for WebSocket sync from Gun.js to gun_dart
+        // Wait for WebSocket sync from Gun.js to dart_gun
         await Future.delayed(Duration(seconds: (3 * timeoutMultiplier).toInt()));
         
-        // Read data from gun_dart
+        // Read data from dart_gun
         final result = await gun.get('interop/from_gunjs').once();
         expect(result, isNotNull);
         expect(result!['message'], equals('Hello from Gun.js'));
@@ -133,14 +133,14 @@ void main() {
       gunJSTest('should handle bi-directional sync', () async {
         final nodeKey = 'interop/bidirectional/${DateTime.now().millisecondsSinceEpoch}';
         
-        // First: gun_dart writes a field
+        // First: dart_gun writes a field
         await gun.get(nodeKey).put({'dart_field': 'from_dart'});
         await Future.delayed(Duration(milliseconds: (500 * timeoutMultiplier).toInt())); // Allow sync to Gun.js
         
         // Verify Gun.js received the dart_field
         final jsResultAfterDart = await _queryGunJS(nodeKey);
-        expect(jsResultAfterDart, isNotNull, reason: 'Gun.js should have received data from gun_dart');
-        expect(jsResultAfterDart['dart_field'], equals('from_dart'), reason: 'Gun.js should have dart_field from gun_dart');
+        expect(jsResultAfterDart, isNotNull, reason: 'Gun.js should have received data from dart_gun');
+        expect(jsResultAfterDart['dart_field'], equals('from_dart'), reason: 'Gun.js should have dart_field from dart_gun');
         
         // Second: Use a different key for Gun.js to put data, then merge
         // This simulates the realistic scenario where Gun.js receives data from another source
@@ -154,10 +154,10 @@ void main() {
         // Wait for Gun.js to process and potentially broadcast
         await Future.delayed(Duration(seconds: (2 * timeoutMultiplier).toInt()));
         
-        // Third: gun_dart queries for the js-only data to test GET response handling
+        // Third: dart_gun queries for the js-only data to test GET response handling
         final dartResultFromJS = await gun.get(jsOnlyKey).once();
-        expect(dartResultFromJS, isNotNull, reason: 'gun_dart should be able to query data that Gun.js has');
-        expect(dartResultFromJS!['js_field'], equals('from_js'), reason: 'gun_dart should receive js_field via query response');
+        expect(dartResultFromJS, isNotNull, reason: 'dart_gun should be able to query data that Gun.js has');
+        expect(dartResultFromJS!['js_field'], equals('from_js'), reason: 'dart_gun should receive js_field via query response');
         
         // Fourth: Verify Gun.js still has the original dart data  
         final jsResultFinal = await _queryGunJS(nodeKey);
@@ -175,7 +175,7 @@ void main() {
         final oldTimestamp = DateTime.now().millisecondsSinceEpoch - 1000;
         final newTimestamp = DateTime.now().millisecondsSinceEpoch;
         
-        // gun_dart writes older data
+        // dart_gun writes older data
         await gun.get(nodeKey).put({
           'value': 'older_value',
           '_': {
@@ -292,7 +292,7 @@ void main() {
         
         // Create message
         await gun.get(messageKey).put({
-          'text': 'Hello from gun_dart!',
+          'text': 'Hello from dart_gun!',
           'author': 'dart_user',
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         });
@@ -395,7 +395,7 @@ void main() {
           },
           'timestamp': DateTime.now().millisecondsSinceEpoch,
           'metadata': {
-            'source': 'gun_dart',
+            'source': 'dart_gun',
             'version': '0.2.1',
           }
         });
@@ -406,7 +406,7 @@ void main() {
         final jsResult = await _queryGunJS(nodeKey);
         expect(jsResult, isNotNull);
         expect(jsResult['nested']?['level1']?['level2'], equals('deep_value'));
-        expect(jsResult['metadata']?['source'], equals('gun_dart'));
+        expect(jsResult['metadata']?['source'], equals('dart_gun'));
       });
     });
   });

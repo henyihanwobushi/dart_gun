@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gun_dart/src/data/metadata_manager.dart';
+import 'package:dart_gun/src/data/metadata_manager.dart';
 
 void main() {
   group('MetadataManager', () {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gun_dart/src/network/message_tracker.dart';
+import 'package:dart_gun/src/network/message_tracker.dart';
 
 void main() {
   group('Message Tracker Tests', () {

@@ -1,7 +1,7 @@
 // This example demonstrates the core Gun Dart functionality
 import 'dart:async';
 
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 /// Basic example showing how to use Gun Dart
 void main() async {

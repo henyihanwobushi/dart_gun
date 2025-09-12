@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gun_dart/src/network/gun_relay_client.dart';
-import 'package:gun_dart/src/network/relay_pool_manager.dart';
-import 'package:gun_dart/src/gun.dart';
-import 'package:gun_dart/src/types/types.dart';
+import 'package:dart_gun/src/network/gun_relay_client.dart';
+import 'package:dart_gun/src/network/relay_pool_manager.dart';
+import 'package:dart_gun/src/gun.dart';
+import 'package:dart_gun/src/types/types.dart';
 
 void main() {
   group('Gun.js Relay Server Compatibility', () {

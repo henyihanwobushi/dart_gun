@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gun_dart/src/network/gun_wire_protocol.dart';
+import 'package:dart_gun/src/network/gun_wire_protocol.dart';
 
 void main() {
   group('Gun.js Wire Protocol Tests', () {

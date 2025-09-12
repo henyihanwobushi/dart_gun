@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/gun_dart.dart';
+import '../lib/dart_gun.dart';
 
 /// Tests for Gun.js compatible user space implementation
 /// 

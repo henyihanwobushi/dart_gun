@@ -1,20 +1,20 @@
 import 'dart:io';
 import 'dart:convert';
-import '../lib/gun_dart.dart';
+import '../lib/dart_gun.dart';
 
 /// Gun.js migration utilities example
 /// 
-/// Demonstrates how to import/export data between Gun.js and gun_dart
+/// Demonstrates how to import/export data between Gun.js and dart_gun
 Future<void> main() async {
   print('=== Gun.js Migration Utilities Example ===\n');
   
-  // Create gun_dart instance
+  // Create dart_gun instance
   final gun = Gun(GunOptions(storage: MemoryStorage()));
   
-  print('1. Creating sample data in gun_dart...\n');
+  print('1. Creating sample data in dart_gun...\n');
   await createSampleData(gun);
   
-  print('2. Exporting gun_dart data to Gun.js format...\n');
+  print('2. Exporting dart_gun data to Gun.js format...\n');
   await demonstrateExport(gun);
   
   print('3. Creating backup...\n');
@@ -47,13 +47,13 @@ Future<void> createSampleData(Gun gun) async {
   await user.getUserPath('todos').put({
     'task1': 'Learn Gun.js',
     'task2': 'Build Flutter app',
-    'task3': 'Sync with gun_dart'
+    'task3': 'Sync with dart_gun'
   });
   
   // Create some public data
   await gun.get('posts/post1').put({
-    'title': 'Hello from gun_dart!',
-    'content': 'This is a test post from gun_dart.',
+    'title': 'Hello from dart_gun!',
+    'content': 'This is a test post from dart_gun.',
     'author': 'alice',
     'timestamp': DateTime.now().millisecondsSinceEpoch,
     'tags': ['gunjs', 'dart', 'flutter']
@@ -74,7 +74,7 @@ Future<void> demonstrateExport(Gun gun) async {
     // Export specific nodes
     final result = await GunJSMigration.exportToGunJS(
       gun,
-      '/tmp/gun_dart_export.json',
+      '/tmp/dart_gun_export.json',
       nodeIds: ['posts/post1', 'comments/comment1'],
       includeMetadata: true,
       prettify: true,
@@ -212,7 +212,7 @@ Future<void> demonstrateFormatConversion() async {
     }
   };
   
-  print('Original gun_dart data:');
+  print('Original dart_gun data:');
   print(const JsonEncoder.withIndent('  ').convert(dartData));
   
   // Convert to Gun.js format
@@ -220,9 +220,9 @@ Future<void> demonstrateFormatConversion() async {
   print('\\nConverted to Gun.js format:');
   print(const JsonEncoder.withIndent('  ').convert(gunJSFormat));
   
-  // Convert back to gun_dart format
+  // Convert back to dart_gun format
   final backToDart = GunJSMigration.convertDataFormat(gunJSFormat, toGunJS: false);
-  print('\\nConverted back to gun_dart format:');
+  print('\\nConverted back to dart_gun format:');
   print(const JsonEncoder.withIndent('  ').convert(backToDart));
   
   // Compare formats
@@ -246,7 +246,7 @@ Future<void> demonstrateFormatConversion() async {
   print('\\nFormat comparison:');
   print('  - Has differences: ${comparison.hasDifferences}');
   if (comparison.hasDifferences) {
-    print('  - Only in gun_dart: ${comparison.onlyInDart}');
+    print('  - Only in dart_gun: ${comparison.onlyInDart}');
     print('  - Only in Gun.js: ${comparison.onlyInGunJS}');
     print('  - In both: ${comparison.inBoth}');
   }

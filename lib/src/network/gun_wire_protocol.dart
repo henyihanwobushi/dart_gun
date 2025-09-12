@@ -252,7 +252,7 @@ class GunWireProtocol {
   }
   
   /// Clean up complex Gun.js metadata structures for proper HAM conflict resolution
-  /// Gun.js can send complex nested metadata that needs to be simplified for gun_dart HAM logic
+  /// Gun.js can send complex nested metadata that needs to be simplified for dart_gun HAM logic
   static Map<String, dynamic> _cleanGunJSMetadata(Map<String, dynamic> putData) {
     print('GunWireProtocol: Cleaning Gun.js metadata for: ${putData.keys}');
     final cleaned = <String, dynamic>{};

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gun_dart/src/storage/sqlite_storage.dart';
-import 'package:gun_dart/src/data/metadata_manager.dart';
+import 'package:dart_gun/src/storage/sqlite_storage.dart';
+import 'package:dart_gun/src/data/metadata_manager.dart';
 import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -14,7 +14,7 @@ void main() {
 
   group('SQLiteStorage Tests', () {
     late SQLiteStorage storage;
-    final testDbName = 'test_gun_dart_${DateTime.now().millisecondsSinceEpoch}.db';
+    final testDbName = 'test_dart_gun_${DateTime.now().millisecondsSinceEpoch}.db';
 
     Future<void> _deleteDbFiles(String dbPath) async {
       try {
@@ -59,7 +59,7 @@ void main() {
           await for (final entity in baseDir.list(recursive: false, followLinks: false)) {
             if (entity is File) {
               final name = entity.uri.pathSegments.isNotEmpty ? entity.uri.pathSegments.last : '';
-              if (name.startsWith('test_gun_dart_') || name.startsWith('custom_test_')) {
+              if (name.startsWith('test_dart_gun_') || name.startsWith('custom_test_')) {
                 try { await entity.delete(); } catch (_) {}
               }
             }

@@ -10,7 +10,7 @@
 /// - Graph database functionality
 /// - End-to-end encryption
 /// - Cross-platform support
-library gun_dart;
+library dart_gun;
 
 // Core exports
 export 'src/gun.dart';

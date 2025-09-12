@@ -1,4 +1,4 @@
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 Future<void> main() async {
   final gun = Gun(GunOptions(storage: MemoryStorage()));

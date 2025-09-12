@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 void main() {
   runApp(MyApp());

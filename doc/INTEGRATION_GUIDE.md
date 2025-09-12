@@ -1,6 +1,6 @@
 # Gun Dart Integration Guide
 
-This guide shows you how to use gun_dart in your own Flutter/Dart applications.
+This guide shows you how to use dart_gun in your own Flutter/Dart applications.
 
 ## Installation Options
 
@@ -13,8 +13,8 @@ If you're developing locally and want to use the latest version:
 dependencies:
   flutter:
     sdk: flutter
-  gun_dart:
-    path: /Users/work/projects/gun_dart  # Update this path to your local gun_dart location
+  dart_gun:
+    path: /Users/work/projects/dart_gun  # Update this path to your local dart_gun location
 ```
 
 ### Option 2: Git Dependency (Recommended for Teams)
@@ -26,9 +26,9 @@ If you want to use it directly from a git repository:
 dependencies:
   flutter:
     sdk: flutter
-  gun_dart:
+  dart_gun:
     git:
-      url: https://github.com/yourusername/gun_dart.git
+      url: https://github.com/yourusername/dart_gun.git
       ref: master  # or specific tag/branch
 ```
 
@@ -41,7 +41,7 @@ Once published to pub.dev (future):
 dependencies:
   flutter:
     sdk: flutter
-  gun_dart: ^0.2.1
+  dart_gun: ^0.2.1
 ```
 
 ## Basic Usage
@@ -49,7 +49,7 @@ dependencies:
 ### 1. Import the Package
 
 ```dart
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 ```
 
 ### 2. Initialize Gun Instance
@@ -366,7 +366,7 @@ await gun.get('users').get(userId).put({
 ```dart
 // test/gun_integration_test.dart
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 void main() {
   group('Gun Integration Tests', () {
@@ -401,7 +401,7 @@ void main() {
 ## Need Help?
 
 - Check the [example folder](/example) for complete working examples
-- Read the [API documentation](/lib/gun_dart.dart) for detailed method signatures
+- Read the [API documentation](/lib/dart_gun.dart) for detailed method signatures
 - Review the [test files](/test) for usage patterns
 
-Happy coding with gun_dart! 🚀
+Happy coding with dart_gun! 🚀

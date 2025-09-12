@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 class SimpleBenchmarkResult {
   final String name;
@@ -63,7 +63,7 @@ Future<void> main(List<String> args) async {
 
   stdout.writeln(jsonOut);
 
-  final outFile = Platform.environment['GUN_BENCH_OUT'] ?? '/tmp/gun_dart_benchmark.json';
+  final outFile = Platform.environment['GUN_BENCH_OUT'] ?? '/tmp/dart_gun_benchmark.json';
   await File(outFile).writeAsString(jsonOut);
   stdout.writeln('Saved benchmark to: $outFile');
 }

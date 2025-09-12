@@ -46,7 +46,7 @@ This document describes the Gun Dart implementation of Gun.js compatible error h
 ### Basic Error Handling
 
 ```dart
-import 'package:gun_dart/gun_dart.dart';
+import 'package:dart_gun/dart_gun.dart';
 
 final gun = Gun();
 
