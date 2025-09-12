@@ -741,22 +741,7 @@ Future<Map<String, dynamic>> _queryGunJS(String key) async {
   }
 }
 
-/// Send data to Gun.js via WebSocket (more realistic than HTTP)
-Future<void> _putToGunJSViaWebSocket(String key, Map<String, dynamic> data) async {
-  WebSocketPeer? gunPeer;
-  try {
-    // Create a direct WebSocket connection to Gun.js and send PUT message
-    gunPeer = WebSocketPeer('ws://localhost:8765/gun');
-    await gunPeer.connect();
-    await Future.delayed(const Duration(milliseconds: 500)); // Allow connection to stabilize
-    
-    // Send PUT message using Gun.js wire protocol
-    await gunPeer.put(key, data);
-    await Future.delayed(const Duration(milliseconds: 200)); // Allow message to be processed
-  } finally {
-    await gunPeer?.close();
-  }
-}
+// WebSocket Gun.js integration function removed - not currently used
 
 /// Send data to Gun.js via HTTP PUT
 Future<void> _putToGunJS(String key, Map<String, dynamic> data) async {

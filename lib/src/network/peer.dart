@@ -4,7 +4,6 @@ import 'gun_wire_protocol.dart';
 import 'transport.dart';
 import 'websocket_transport.dart';
 import 'peer_handshake.dart';
-import '../utils/utils.dart';
 
 /// Abstract peer interface for Gun network layer
 abstract class Peer {
@@ -289,7 +288,6 @@ class WebSocketPeer implements Peer {
           _handleGunMessage(gunMessage);
           break;
         case GunMessageType.unknown:
-        default:
           print('WebSocketPeer: Processing UNKNOWN message type');
           // Convert to GunMessage and handle normally
           final gunMessage = _wireMessageToGunMessage(wireMessage);

@@ -1,4 +1,3 @@
-import 'dart:math';
 import '../utils/utils.dart';
 
 /// Gun.js compatible metadata manager
@@ -6,7 +5,7 @@ import '../utils/utils.dart';
 /// Handles automatic creation, validation, and maintenance of Gun.js
 /// compatible metadata for all nodes in the system.
 class MetadataManager {
-  static final Random _random = Random();
+  // Random instance removed - not currently used
   static String? _machineId;
   static int _machineState = 0;
   

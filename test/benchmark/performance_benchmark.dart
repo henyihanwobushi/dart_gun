@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -584,7 +583,6 @@ class ComparisonReport {
 }
 
 /// Main benchmark runner for testing
-@Timeout(Duration(minutes: 5))
 void main() async {
   group('Performance Benchmarks', () {
     late Gun gun;

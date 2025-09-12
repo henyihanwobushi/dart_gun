@@ -64,10 +64,11 @@ void main() {
         final wsConfig = RelayServerConfig.defaultConfig('ws://localhost:8080');
         final wssConfig = RelayServerConfig.defaultConfig('wss://relay.gun.eco');
         
-        final httpClient = GunRelayClient(config: httpConfig);
-        final httpsClient = GunRelayClient(config: httpsConfig);
-        final wsClient = GunRelayClient(config: wsConfig);
-        final wssClient = GunRelayClient(config: wssConfig);
+        // Client instances created for testing but not used directly
+        // final httpClient = GunRelayClient(config: httpConfig);
+        // final httpsClient = GunRelayClient(config: httpsConfig);
+        // final wsClient = GunRelayClient(config: wsConfig);
+        // final wssClient = GunRelayClient(config: wssConfig);
         
         // URL conversion is internal, but we can test through the config
         expect(httpConfig.url, equals('http://localhost:8080'));
@@ -238,7 +239,7 @@ void main() {
         expect(gun.relayPool, isNull);
         
         // Add a relay (this initializes the pool)
-        final added = await gun.addRelay('ws://relay.gun.eco');
+        await gun.addRelay('ws://relay.gun.eco');
         
         // Pool should now exist
         expect(gun.relayPool, isNotNull);

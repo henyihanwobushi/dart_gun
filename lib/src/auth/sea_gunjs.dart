@@ -250,13 +250,7 @@ class SEAGunJS {
     return Uint8List.fromList(result.take(keyLength).toList());
   }
   
-  /// PBKDF2 key derivation compatible with Gun.js (enhanced version)
-  static Future<Uint8List> _pbkdf2(String password, Uint8List salt, int iterations, int keyLength) async {
-    final pbkdf2 = PBKDF2KeyDerivator(HMac(SHA256Digest(), 64));
-    pbkdf2.init(Pbkdf2Parameters(salt, iterations, keyLength));
-    
-    return pbkdf2.process(utf8.encode(password));
-  }
+  // PBKDF2 implementation removed - not currently used
   
   /// Compress public key to match Gun.js format
   static Uint8List _compressPublicKey(ECPoint point) {

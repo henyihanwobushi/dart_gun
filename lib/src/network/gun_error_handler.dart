@@ -1,6 +1,5 @@
 import 'dart:async';
 import '../utils/utils.dart';
-import '../types/events.dart';
 
 /// Gun.js error types following DAM (Distributed Ammunition Machine) specification
 enum GunErrorType {

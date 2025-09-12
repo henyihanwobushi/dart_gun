@@ -355,7 +355,8 @@ void main() {
         }
 
         // Get stats before optimization
-        final statsBefore = await storage.getStats();
+        // Get stats before optimization (currently unused)
+        // final statsBefore = await storage.getStats();
         
         // Optimize
         await storage.optimize();
@@ -498,7 +499,8 @@ void main() {
       test('should handle database reopening', () async {
         // Store some data
         await storage.put('persist:test', {'value': 'persistent'});
-        final dbPath = await storage.databasePath;
+        // Database path extracted but not used in this test
+        // final dbPath = await storage.databasePath;
         
         // Close storage
         await storage.close();

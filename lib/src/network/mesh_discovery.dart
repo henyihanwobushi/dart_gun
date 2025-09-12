@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import '../utils/utils.dart';
 import 'peer.dart';
 import 'peer_handshake.dart';
-import 'websocket_transport.dart';
 
 /// Gun.js compatible mesh networking discovery system
 /// 
@@ -21,7 +20,7 @@ class MeshNetworkDiscovery {
   
   Timer? _discoveryTimer;
   Timer? _maintenanceTimer;
-  StreamSubscription? _peerConnectionSub;
+  // Peer connection subscription removed - not currently used
   bool _isActive = false;
   
   /// Statistics for monitoring mesh health

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import '../lib/src/network/gun_error_handler.dart';
-import '../lib/src/utils/utils.dart';
 
 void main() {
   group('GunError', () {

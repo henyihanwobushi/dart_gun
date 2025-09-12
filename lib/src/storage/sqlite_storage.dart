@@ -4,7 +4,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'storage_adapter.dart';
 import '../data/metadata_manager.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // For FFI database factory
+ // For FFI database factory
 
 /// SQLite storage adapter for Gun Dart
 /// Provides persistent storage using SQLite database

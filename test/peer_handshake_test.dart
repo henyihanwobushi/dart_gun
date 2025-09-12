@@ -2,8 +2,6 @@ import 'package:test/test.dart';
 import 'dart:async';
 
 import '../lib/src/network/peer_handshake.dart';
-import '../lib/src/network/gun_wire_protocol.dart';
-import '../lib/src/utils/utils.dart';
 
 void main() {
   group('PeerHandshakeManager Tests', () {

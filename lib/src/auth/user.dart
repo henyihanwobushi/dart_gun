@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 import '../gun.dart';
 import '../gun_chain.dart';
-import '../types/types.dart';
 import 'sea.dart';
 
 /// User authentication system for Gun Dart

@@ -5,8 +5,6 @@ import 'data/metadata_manager.dart';
 import 'network/gun_query.dart';
 import 'network/gun_wire_protocol.dart';
 import 'types/events.dart';
-import 'types/types.dart';
-import 'utils/utils.dart';
 
 /// Function type for Gun event listeners
 typedef GunListener<T> = void Function(T data, String key);
@@ -36,17 +34,7 @@ class GunChain {
   }) : _path = path,
        _operations = [...operations];
 
-  // Legacy constructor support for backwards compatibility
-  GunChain._legacy(
-    this._gun,
-    this._key,
-    this._path,
-    Function? filterFn,
-    Function? mapFn,
-  ) : _operations = [] {
-    if (filterFn != null) _operations.add(_ChainOperation('filter', filterFn));
-    if (mapFn != null) _operations.add(_ChainOperation('map', mapFn));
-  }
+  // Legacy constructor removed - not currently used
 
   /// Get a sub-node by key
   GunChain get(String key) {

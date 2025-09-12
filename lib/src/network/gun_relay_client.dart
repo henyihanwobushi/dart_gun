@@ -5,9 +5,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:web_socket_channel/io.dart';
 import '../utils/utils.dart';
 import 'gun_wire_protocol.dart';
-import 'peer_handshake.dart';
 import 'message_tracker.dart';
-import '../types/events.dart';
 
 /// Gun.js relay server configuration
 class RelayServerConfig {
@@ -74,7 +72,7 @@ class GunRelayClient {
   WebSocketChannel? _channel;
   RelayConnectionState _state = RelayConnectionState.disconnected;
   final MessageTracker _messageTracker = MessageTracker();
-  final PeerHandshakeManager _handshakeManager = PeerHandshakeManager();
+  // Handshake manager removed - not currently used
   final RelayStats _stats = RelayStats();
   
   final StreamController<Map<String, dynamic>> _messageController = StreamController.broadcast();

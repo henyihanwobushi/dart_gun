@@ -86,8 +86,9 @@ void main() async {
   print('\n👤 4. User Authentication');
 
   try {
-    final user = gun.user();
+    gun.user();
     print('   Creating user account...');
+    // User system initialized
 
     // In a real implementation, this would create and authenticate a user
     print('   Note: User authentication requires full SEA implementation');

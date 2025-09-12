@@ -1,12 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import '../gun.dart';
-import '../storage/storage_adapter.dart';
 import '../data/metadata_manager.dart';
-import '../types/types.dart';
-import 'utils.dart';
-import 'validator.dart';
 
 /// Gun.js data migration utilities
 /// 
@@ -336,7 +331,7 @@ class GunJSMigration {
       }
       
       if (!metadata.containsKey('machineId')) {
-        metadata['machineId'] = Utils.randomString(8);
+        metadata['machineId'] = 'machine_${DateTime.now().millisecondsSinceEpoch}';
       }
     } else {
       // Add missing metadata

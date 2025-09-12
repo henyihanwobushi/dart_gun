@@ -1,4 +1,3 @@
-import 'dart:convert';
 import '../utils/utils.dart';
 
 /// Gun.js protocol version support and compatibility management
@@ -77,10 +76,11 @@ class ProtocolVersion {
     // Convert semantic version to Gun.js format
     if (RegExp(r'^\d+\.\d+\.\d+$').hasMatch(version)) {
       // Convert from semantic versioning to Gun.js format
-      final parts = version.split('.');
-      final major = int.tryParse(parts[0]) ?? 0;
-      final minor = int.tryParse(parts[1]) ?? 0;
-      final patch = int.tryParse(parts[2]) ?? 0;
+      // Parse semantic version components (currently unused)
+      // final parts = version.split('.');
+      // final major = int.tryParse(parts[0]) ?? 0;
+      // final minor = int.tryParse(parts[1]) ?? 0;
+      // final patch = int.tryParse(parts[2]) ?? 0;
       
       // Just return the normalized version as-is for now
       // Gun.js version format is complex and varies

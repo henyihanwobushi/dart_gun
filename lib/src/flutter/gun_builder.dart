@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../gun_chain.dart';
-import '../types/types.dart';
 
 /// A Flutter widget that builds UI based on Gun data and automatically updates
 /// when the data changes in real-time

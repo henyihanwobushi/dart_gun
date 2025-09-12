@@ -77,6 +77,9 @@ class PNCounter {
 
   /// Current value (positive - negative)
   int get value => _positive.value - _negative.value;
+  
+  /// Node ID for this counter
+  String get nodeId => _nodeId;
 
   /// Increment the counter
   void increment([int amount = 1]) {

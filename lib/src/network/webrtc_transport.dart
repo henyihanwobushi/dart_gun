@@ -12,7 +12,7 @@ import 'transport.dart';
 /// In production, you would use packages like flutter_webrtc or similar.
 class WebRtcTransport extends BaseTransport {
   final String _peerId;
-  final Map<String, dynamic> _config;
+  // Config removed - not currently used
   
   bool _isConnected = false;
   String? _connectionUrl;
@@ -28,14 +28,6 @@ class WebRtcTransport extends BaseTransport {
     required String peerId,
     Map<String, dynamic>? config,
   })  : _peerId = peerId,
-        _config = {
-          'iceServers': [
-            {'urls': 'stun:stun.l.google.com:19302'},
-            {'urls': 'stun:stun1.l.google.com:19302'},
-          ],
-          'iceCandidatePoolSize': 10,
-          ...?config,
-        },
         super();
 
   @override
@@ -201,8 +193,9 @@ class WebRtcTransport extends BaseTransport {
   /// Add ICE candidate
   Future<void> addIceCandidate(Map<String, dynamic> candidate) async {
     final candidateString = candidate['candidate'];
-    final sdpMid = candidate['sdpMid'];
-    final sdpMLineIndex = candidate['sdpMLineIndex'];
+    // sdpMid and sdpMLineIndex extracted but not currently used
+    // final sdpMid = candidate['sdpMid'];
+    // final sdpMLineIndex = candidate['sdpMLineIndex'];
     
     if (candidateString == null) {
       throw ArgumentError('Invalid ICE candidate');

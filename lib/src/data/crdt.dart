@@ -110,27 +110,7 @@ class CRDT {
     return HAMState.resolveConflict(field, current, incoming, currentHAM, incomingHAM);
   }
   
-  /// Merges metadata between nodes
-  static Map<String, dynamic> _mergeMeta(dynamic current, dynamic incoming) {
-    if (current is! Map && incoming is! Map) {
-      return {'#': incoming, '>': DateTime.now().millisecondsSinceEpoch};
-    }
-    
-    final currentMeta = current is Map ? Map<String, dynamic>.from(current) : <String, dynamic>{};
-    final incomingMeta = incoming is Map ? Map<String, dynamic>.from(incoming) : <String, dynamic>{};
-    
-    // Merge state timestamps
-    for (final key in incomingMeta.keys) {
-      if (key == '>') continue; // Skip the vector clock field
-      final currentTime = currentMeta[key] as int? ?? 0;
-      final incomingTime = incomingMeta[key] as int? ?? 0;
-      if (incomingTime > currentTime) {
-        currentMeta[key] = incomingTime;
-      }
-    }
-    
-    return currentMeta;
-  }
+  // Metadata merge function removed - not currently used
   
   /// Deterministic comparison for tie-breaking
   static dynamic _deterministicCompare(dynamic a, dynamic b) {
