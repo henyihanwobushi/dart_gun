@@ -16,6 +16,25 @@ void main() {
     late SQLiteStorage storage;
     final testDbName = 'test_gun_dart_${DateTime.now().millisecondsSinceEpoch}.db';
 
+    Future<void> _deleteDbFiles(String dbPath) async {
+      try {
+        final mainFile = File(dbPath);
+        final walFile = File('${dbPath}-wal');
+        final shmFile = File('${dbPath}-shm');
+        if (await mainFile.exists()) {
+          await mainFile.delete();
+        }
+        if (await walFile.exists()) {
+          await walFile.delete();
+        }
+        if (await shmFile.exists()) {
+          await shmFile.delete();
+        }
+      } catch (_) {
+        // Ignore cleanup errors
+      }
+    }
+
     setUp(() async {
       storage = SQLiteStorage(testDbName);
       await storage.initialize();
@@ -26,12 +45,28 @@ void main() {
       // Clean up test database file
       try {
         final dbPath = await storage.databasePath;
-        final file = File(dbPath);
-        if (await file.exists()) {
-          await file.delete();
-        }
+        await _deleteDbFiles(dbPath);
       } catch (e) {
         // Ignore cleanup errors
+      }
+    });
+
+    tearDownAll(() async {
+      // Sweep and remove any leftover test databases created by this suite
+      try {
+        final baseDir = Directory('.dart_tool/sqflite_common_ffi/databases');
+        if (await baseDir.exists()) {
+          await for (final entity in baseDir.list(recursive: false, followLinks: false)) {
+            if (entity is File) {
+              final name = entity.uri.pathSegments.isNotEmpty ? entity.uri.pathSegments.last : '';
+              if (name.startsWith('test_gun_dart_') || name.startsWith('custom_test_')) {
+                try { await entity.delete(); } catch (_) {}
+              }
+            }
+          }
+        }
+      } catch (_) {
+        // Ignore sweep errors
       }
     });
 
@@ -390,6 +425,11 @@ void main() {
           expect(retrieved!['data'], equals('custom'));
         } finally {
           await customStorage.close();
+          // Delete custom database files
+          try {
+            final customPath = await customStorage.databasePath;
+            await _deleteDbFiles(customPath);
+          } catch (_) {}
         }
       });
     });
