@@ -52,6 +52,7 @@ app.*.map.json
 .packages
 .pub-cache/
 .pub/
+.dart_tool/
 build/
 pubspec.lock
 
