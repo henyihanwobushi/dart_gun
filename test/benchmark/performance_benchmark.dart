@@ -15,6 +15,13 @@ class PerformanceBenchmark {
   
   PerformanceBenchmark(this._gun);
   
+  /// Calculate operations per second with a safe, non-zero denominator
+  double _safeOpsPerSecond(int iterations, Stopwatch stopwatch) {
+    // Avoid division by zero resulting in Infinity by clamping to a small value
+    final double seconds = max(stopwatch.elapsedMicroseconds / 1e6, 0.001);
+    return iterations / seconds;
+  }
+  
   /// Run all benchmark tests
   Future<BenchmarkReport> runAllBenchmarks({
     int iterations = 1000,
@@ -80,7 +87,7 @@ class PerformanceBenchmark {
       name: 'Basic Writes',
       iterations: iterations,
       totalTime: stopwatch.elapsed,
-      operationsPerSecond: iterations / (stopwatch.elapsedMilliseconds / 1000),
+      operationsPerSecond: _safeOpsPerSecond(iterations, stopwatch),
       memoryUsage: _getCurrentMemoryUsage(),
     ));
     
@@ -111,7 +118,7 @@ class PerformanceBenchmark {
       name: 'Basic Reads',
       iterations: iterations,
       totalTime: stopwatch.elapsed,
-      operationsPerSecond: iterations / (stopwatch.elapsedMilliseconds / 1000),
+      operationsPerSecond: _safeOpsPerSecond(iterations, stopwatch),
       memoryUsage: _getCurrentMemoryUsage(),
     ));
     
@@ -140,7 +147,7 @@ class PerformanceBenchmark {
       name: 'Chained Operations',
       iterations: iterations,
       totalTime: stopwatch.elapsed,
-      operationsPerSecond: iterations / (stopwatch.elapsedMilliseconds / 1000),
+      operationsPerSecond: _safeOpsPerSecond(iterations, stopwatch),
       memoryUsage: _getCurrentMemoryUsage(),
     ));
     
@@ -184,7 +191,7 @@ class PerformanceBenchmark {
       name: 'Conflict Resolution',
       iterations: iterations * 2, // Two operations per iteration
       totalTime: stopwatch.elapsed,
-      operationsPerSecond: (iterations * 2) / (stopwatch.elapsedMilliseconds / 1000),
+      operationsPerSecond: _safeOpsPerSecond(iterations * 2, stopwatch),
       memoryUsage: _getCurrentMemoryUsage(),
     ));
     
@@ -232,7 +239,7 @@ class PerformanceBenchmark {
       name: 'Complex Queries',
       iterations: iterations,
       totalTime: stopwatch.elapsed,
-      operationsPerSecond: iterations / (stopwatch.elapsedMilliseconds / 1000),
+      operationsPerSecond: _safeOpsPerSecond(iterations, stopwatch),
       memoryUsage: _getCurrentMemoryUsage(),
     ));
     
@@ -258,7 +265,7 @@ class PerformanceBenchmark {
       name: 'User Operations',
       iterations: iterations * 3, // Create, put, leave
       totalTime: stopwatch.elapsed,
-      operationsPerSecond: (iterations * 3) / (stopwatch.elapsedMilliseconds / 1000),
+      operationsPerSecond: _safeOpsPerSecond(iterations * 3, stopwatch),
       memoryUsage: _getCurrentMemoryUsage(),
     ));
     
@@ -315,7 +322,7 @@ class PerformanceBenchmark {
       name: 'Graph Traversal',
       iterations: iterations,
       totalTime: stopwatch.elapsed,
-      operationsPerSecond: iterations / (stopwatch.elapsedMilliseconds / 1000),
+      operationsPerSecond: _safeOpsPerSecond(iterations, stopwatch),
       memoryUsage: _getCurrentMemoryUsage(),
     ));
     
@@ -350,7 +357,7 @@ class PerformanceBenchmark {
       name: 'Bulk Operations',
       iterations: iterations,
       totalTime: stopwatch.elapsed,
-      operationsPerSecond: iterations / (stopwatch.elapsedMilliseconds / 1000),
+      operationsPerSecond: _safeOpsPerSecond(iterations, stopwatch),
       memoryUsage: _getCurrentMemoryUsage(),
     ));
     
@@ -615,6 +622,8 @@ void main() async {
     });
     
     test('individual operation benchmarks', () async {
+      // Reset accumulated results from previous tests to avoid contamination
+      benchmark._results.clear();
       // Test individual operations for detailed profiling
       await benchmark._benchmarkBasicWrites(50);
       await benchmark._benchmarkBasicReads(50);

@@ -182,9 +182,9 @@ void main() async {
 ### 🎆 **Complete Gun.js Ecosystem Integration - NO ISSUES REMAINING**
 gun_dart now provides seamless interoperability with the Gun.js ecosystem:
 
-- **[Gun.js Compatibility Analysis](GUNJS_COMPATIBILITY.md)** - COMPLETE compatibility achieved
-- **[Gun.js Compatibility TODO](GUNJS_COMPATIBILITY_TODO.md)** - ALL tasks completed with 100% test success
-- **[Integration Guide](INTEGRATION_GUIDE.md)** - Ready for production deployment
+- **[Gun.js Compatibility Analysis](doc/GUNJS_COMPATIBILITY.md)** - COMPLETE compatibility achieved
+- **[Gun.js Compatibility TODO](doc/GUNJS_COMPATIBILITY_TODO.md)** - ALL tasks completed with 100% test success
+- **[Integration Guide](doc/INTEGRATION_GUIDE.md)** - Ready for production deployment
 
 **Status**: 🎆 **FULLY ACHIEVED** - Complete Gun.js ecosystem compatibility with perfect test coverage!
 
@@ -203,7 +203,7 @@ This project welcomes contributions! Key areas:
 - SEA cryptography alignment with Gun.js
 - Comprehensive interoperability testing
 
-See our **[Gun.js Compatibility TODO](GUNJS_COMPATIBILITY_TODO.md)** for specific tasks and implementation details.
+See our **[Gun.js Compatibility TODO](doc/GUNJS_COMPATIBILITY_TODO.md)** for specific tasks and implementation details.
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
