@@ -57,5 +57,4 @@ pubspec.lock
 
 # Test coverage
 coverage/
-.dart_tool/
 scripts/
